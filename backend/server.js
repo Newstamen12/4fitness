@@ -64,10 +64,10 @@ app.get('/', (req, res) => {
 // ==========================================
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
-    app.listen(process.env.PORT, () => {
-      console.log('Connected to MONGO DB & listening on port', process.env.PORT);
-    });
+    console.log('Connected to MongoDB');
   })
   .catch((error) => {
     console.log('Database connection error:', error);
   });
+
+module.exports = app;
