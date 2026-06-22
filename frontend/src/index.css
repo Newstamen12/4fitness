@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+/* 1. Global Custom Keyframes */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes scrollFloatUp {
+  0% { transform: translateY(40px); opacity: 0.7; }
+  45% { transform: translateY(0px); opacity: 1; }
+  55% { transform: translateY(0px); opacity: 1; }
+  100% { transform: translateY(-20px); opacity: 0.7; }
+}
+
+/* 2. New Tailwind v4 Utility Definitions */
+@utility animate-marquee-loop {
+  display: flex;
+  width: max-content;
+  gap: 1.5rem;
+  animation: marquee 35s linear infinite;
+  will-change: transform;
+}
+
+@utility scroll-capture-flow {
+  animation: scrollFloatUp linear both;
+  animation-timeline: scroll(root);
+  animation-range: entry 5% exit 95%;
+}
+
+/* 3. Global Body Override (Captivating Minimalist Pearl) */
+body {
+  background-color: #FAFAFA;
+  color: #262626;
+  margin: 0;
+}
