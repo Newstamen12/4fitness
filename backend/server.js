@@ -60,20 +60,22 @@ app.get('/', (req, res) => {
 });
 
 // ==========================================
-// 7. CONNECT TO MONGO DB & LISTEN (Fixed Here)
+// 7. CONNECT TO MONGO DB & LISTEN
 // ==========================================
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('Connected to MongoDB Database');
     
-    // 🔥 FIX: Server must explicitly listen on the port after a successful DB connection
-    app.listen(port, () => {
+    // Only listen locally — Vercel handles this in production
+    if (process.env.NODE_ENV !== 'production') {
+      app.listen(port, () => {
         console.log(`[SERVER] Running cleanly on port: ${port}`);
-    });
+      });
+    }
   })
   .catch((error) => {
     console.log('Database connection error:', error);
-    process.exit(1); // Exit process if database connection fails entirely
+    process.exit(1);
   });
 
 module.exports = app;
