@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiUrl } from '../config/api';
 
 export default function Profile({ user }) {
   // ----------------------------------------------------------------
@@ -53,7 +54,7 @@ export default function Profile({ user }) {
       setProfileLoading(true);
       setProfileError(null);
       try {
-        const response = await fetch('http://localhost:4000/api/user/profile-details', {
+        const response = await fetch(apiUrl('/api/user/profile-details'), {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();

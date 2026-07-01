@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { apiUrl } from '../config/api';
 
 export default function Login({ setUser }) {
   const navigate = useNavigate();
@@ -16,7 +17,7 @@ export default function Login({ setUser }) {
     setSuccessMessage('');
 
     try {
-      const response = await fetch('http://localhost:4000/api/user/login', {
+      const response = await fetch(apiUrl('/api/user/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

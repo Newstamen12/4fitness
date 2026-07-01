@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiUrl } from '../config/api';
 
 export default function AdminSwotEngine({ clientName = "Member", selectedClientId, onSaveSwot }) {
   const [swotData, setSwotData] = useState({
@@ -16,7 +17,7 @@ export default function AdminSwotEngine({ clientName = "Member", selectedClientI
       
       setLoading(true);
       try {
-        const response = await fetch(`http://localhost:4000/api/user/swot/${selectedClientId}`, {
+        const response = await fetch(apiUrl(`/api/user/swot/${selectedClientId}`), {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }

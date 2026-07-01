@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiUrl } from '../config/api';
 
 export default function ClientSwotView({ user }) {
   const [swot, setSwot] = useState(null);
@@ -8,13 +9,13 @@ export default function ClientSwotView({ user }) {
   useEffect(() => {
     const fetchMySwot = async () => {
       try {
-        const profileRes = await fetch('http://localhost:4000/api/user/profile-details', {
+        const profileRes = await fetch(apiUrl('/api/user/profile-details'), {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const profileData = await profileRes.json();
         
         if (profileRes.ok && profileData._id) {
-          const swotRes = await fetch(`http://localhost:4000/api/user/swot/${profileData._id}`, {
+          const swotRes = await fetch(apiUrl(`/api/user/swot/${profileData._id}`), {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           const swotData = await swotRes.json();

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { apiUrl } from '../config/api';
 
 export default function AuthPage({ setUser }) {
   const [activeTab, setActiveTab] = useState('login');
@@ -32,7 +33,7 @@ export default function AuthPage({ setUser }) {
     const payload = activeTab === 'register' ? { username, email, password } : { email, password };
 
     try {
-      const response = await fetch(`http://localhost:4000${endpoint}`, {
+      const response = await fetch(apiUrl(endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -65,7 +66,7 @@ export default function AuthPage({ setUser }) {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:4000/api/user/verify-otp', {
+      const response = await fetch(apiUrl('/api/user/verify-otp'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code: otpCode }),

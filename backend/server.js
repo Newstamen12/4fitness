@@ -14,7 +14,7 @@ const helmet = require('helmet');
 
 const paymentRoutes = require('./routes/paymentsRoutes');
 const workoutRoutes = require('./routes/workout'); 
-const userRoutes = require('./routes/user');
+const userRoutes = require('./routes/User');
 
 // ==========================================
 // 3. CONFIGURE DNS

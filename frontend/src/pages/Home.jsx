@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import newImg from '../assets/new.jpg'; 
 import logoImg from '../assets/4fitness logo.jpg';
+import { apiUrl } from '../config/api';
 
 export default function Home({ user }) {
   const resolvedUser = user?.user ? user.user : user;
@@ -15,7 +16,7 @@ export default function Home({ user }) {
     const fetchProfileSummary = async () => {
       if (!resolvedUser || isAdmin || !token) return;
       try {
-        const response = await fetch('http://localhost:4000/api/user/profile-details', {
+        const response = await fetch(apiUrl('/api/user/profile-details'), {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await response.json();

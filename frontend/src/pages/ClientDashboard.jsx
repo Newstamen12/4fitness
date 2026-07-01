@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { apiUrl } from '../config/api';
 
 export default function ClientDashboard({ user }) {
   const [dashboardData, setDashboardData] = useState(null);
@@ -12,7 +13,7 @@ export default function ClientDashboard({ user }) {
     const fetchDashboard = async () => {
       setLoading(true);
       try {
-        const response = await fetch('http://localhost:4000/api/user/dashboard', {
+        const response = await fetch(apiUrl('/api/user/dashboard'), {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -38,7 +39,7 @@ export default function ClientDashboard({ user }) {
     setNotifPrefs(updated);
 
     try {
-      const response = await fetch('http://localhost:4000/api/user/notification-preferences', {
+      const response = await fetch(apiUrl('/api/user/notification-preferences'), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

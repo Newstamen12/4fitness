@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { apiUrl } from '../config/api';
 
 export default function AdminAuthPage({ setUser }) {
   const [email, setEmail] = useState('');
@@ -12,7 +13,7 @@ export default function AdminAuthPage({ setUser }) {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:4000/api/user/login', {
+      const response = await fetch(apiUrl('/api/user/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })

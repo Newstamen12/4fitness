@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { apiUrl } from '../config/api';
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -26,7 +27,7 @@ export default function Signup() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch('http://localhost:4000/api/user/signup', {
+      const response = await fetch(apiUrl('/api/user/signup'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -62,7 +63,7 @@ export default function Signup() {
 
     try {
       // ⚠️ Note: Double check if your express router uses /verify-otp or /verify-code to match your controller!
-      const response = await fetch('http://localhost:4000/api/user/verify-otp', {
+      const response = await fetch(apiUrl('/api/user/verify-otp'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code: otpCode }),

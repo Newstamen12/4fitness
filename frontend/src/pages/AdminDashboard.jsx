@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiUrl } from '../config/api';
 
 // 📊 1. LOCAL INLINE SWOT ENGINE COMPONENT
 function SwotEngine({ clientName, swotData, onChange, onSave, submitting }) {
@@ -134,7 +135,7 @@ export default function AdminDashboard({ user }) {
     const fetchClients = async () => {
       setLoading(true);
       try {
-        const response = await fetch('http://localhost:4000/api/user/profiles', {
+        const response = await fetch(apiUrl('/api/user/profiles'), {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -155,7 +156,7 @@ export default function AdminDashboard({ user }) {
     const fetchSwotMatrix = async () => {
       if (!selectedClient) return;
       try {
-        const response = await fetch(`http://localhost:4000/api/user/swot/${selectedClient._id}`, {
+        const response = await fetch(apiUrl(`/api/user/swot/${selectedClient._id}`), {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -194,7 +195,7 @@ export default function AdminDashboard({ user }) {
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await fetch('http://localhost:4000/api/user/swot', {
+      const response = await fetch(apiUrl('/api/user/swot'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -226,7 +227,7 @@ export default function AdminDashboard({ user }) {
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await fetch('http://localhost:4000/api/user/grade-performance', {
+      const response = await fetch(apiUrl('/api/user/grade-performance'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -260,7 +261,7 @@ export default function AdminDashboard({ user }) {
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await fetch(`http://localhost:4000/api/user/grade/manual/${selectedClient._id}`, {
+      const response = await fetch(apiUrl(`/api/user/grade/manual/${selectedClient._id}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -298,7 +299,7 @@ export default function AdminDashboard({ user }) {
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await fetch('http://localhost:4000/api/user/goals/set', {
+      const response = await fetch(apiUrl('/api/user/goals/set'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -345,7 +346,7 @@ export default function AdminDashboard({ user }) {
     setSeeding(true);
     setMessage({ type: '', text: '' });
     try {
-      const response = await fetch('http://localhost:4000/api/user/auto-feedback', {
+      const response = await fetch(apiUrl('/api/user/auto-feedback'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
