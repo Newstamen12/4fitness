@@ -1,7 +1,10 @@
 {
-  "dependencies": {
-    "mongoose": "^9.6.2",
-    
-    "openai": "^6.39.1"
-  }
+  "name": "4fitness",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "backend",
+    "frontend",
+    "gemini-node-app"
+  ]
 }

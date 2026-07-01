@@ -62,20 +62,19 @@ app.get('/', (req, res) => {
 // ==========================================
 // 7. CONNECT TO MONGO DB & LISTEN
 // ==========================================
-mongoose.connect(process.env.MONGO_URI)
+const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/fitness';
+
+mongoose.connect(mongoUri, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
   .then(() => {
     console.log('Connected to MongoDB Database');
-    
-    // Only listen locally — Vercel handles this in production
-    if (process.env.NODE_ENV !== 'production') {
-      app.listen(port, () => {
-        console.log(`[SERVER] Running cleanly on port: ${port}`);
-      });
-    }
   })
   .catch((error) => {
-    console.log('Database connection error:', error);
-    process.exit(1);
+    console.error('Database connection error:', error);
+    // Keep the function alive so Vercel can still respond with 500 errors
+    // instead of killing the runtime on startup failure.
   });
 
 module.exports = app;
