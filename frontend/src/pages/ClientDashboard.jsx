@@ -2,6 +2,104 @@ import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { apiUrl } from '../config/api';
 
+// Utility to parse mixed grade strings into a 0-100 scale
+export function convertGradeToNumeric(grade) {
+  if (!grade) return 0;
+  let str = String(grade).trim().toLowerCase();
+  
+  // 1. Check if it is a fraction (e.g. 9/10, 8.5/10)
+  if (str.includes('/')) {
+    const parts = str.split('/');
+    if (parts.length === 2) {
+      const num = parseFloat(parts[0]);
+      const den = parseFloat(parts[1]);
+      if (!isNaN(num) && !isNaN(den) && den > 0) {
+        return Math.min(100, Math.round((num / den) * 100));
+      }
+    }
+  }
+  
+  // 2. Check if it ends with %
+  if (str.endsWith('%')) {
+    const val = parseFloat(str);
+    if (!isNaN(val)) return Math.min(100, Math.max(0, val));
+  }
+  
+  // 3. Try parsing as a raw number
+  const parsedNum = parseFloat(str);
+  if (!isNaN(parsedNum)) {
+    if (parsedNum <= 10 && parsedNum >= 0) {
+      return Math.round(parsedNum * 10);
+    }
+    return Math.min(100, Math.max(0, Math.round(parsedNum)));
+  }
+
+  // 4. Letter grades mapping
+  const letterMap = {
+    'a+': 98, 'a': 95, 'a-': 90,
+    'b+': 88, 'b': 85, 'b-': 80,
+    'c+': 78, 'c': 75, 'c-': 70,
+    'd+': 68, 'd': 65, 'd-': 60,
+    'f': 50
+  };
+  
+  for (const letter in letterMap) {
+    if (str.startsWith(letter)) {
+      return letterMap[letter];
+    }
+  }
+  
+  // 5. Descriptive keywords matching
+  if (str.includes('elite') || str.includes('excellent') || str.includes('outstanding') || str.includes('perfect')) {
+    return 95;
+  }
+  if (str.includes('very good') || str.includes('strong') || str.includes('great') || str.includes('good')) {
+    return 85;
+  }
+  if (str.includes('average') || str.includes('satisfactory') || str.includes('decent') || str.includes('fair') || str.includes('medium')) {
+    return 70;
+  }
+  if (str.includes('poor') || str.includes('weak') || str.includes('subpar') || str.includes('bad')) {
+    return 55;
+  }
+  if (str.includes('fail') || str.includes('unsatisfactory') || str.includes('terrible')) {
+    return 40;
+  }
+
+  return 50;
+}
+
+export function convertNumericToGrade(val) {
+  if (val >= 90) return 'A';
+  if (val >= 80) return 'B';
+  if (val >= 70) return 'C';
+  if (val >= 60) return 'D';
+  return 'F';
+}
+
+const CustomTooltip = ({ active, payload }) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-white border border-neutral-200/80 rounded-xl p-4 shadow-md text-left font-sans max-w-xs">
+        <p className="text-[10px] font-mono text-neutral-400 font-bold uppercase tracking-wider mb-1">{data.fullDate}</p>
+        <p className="text-sm font-bold text-neutral-900">
+          Normalized Score: <span className="text-emerald-600 font-mono">{data.grade}%</span>
+        </p>
+        <p className="text-xs text-neutral-600 mt-1">
+          <strong className="text-neutral-700">Coach Grade:</strong> {data.originalGrade}
+        </p>
+        {data.feedback && (
+          <p className="text-xs text-neutral-500 mt-2 italic border-t border-neutral-100 pt-2 line-clamp-3">
+            "{data.feedback}"
+          </p>
+        )}
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function ClientDashboard({ user }) {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -76,11 +174,37 @@ export default function ClientDashboard({ user }) {
     .slice(-10)
     .map((entry) => ({
       date: new Date(entry.ratedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      grade: entry.grade ? parseInt(entry.grade) || 0 : 0
+      fullDate: new Date(entry.ratedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      grade: convertGradeToNumeric(entry.grade),
+      originalGrade: entry.grade,
+      feedback: entry.feedback || ''
     }));
 
   const activeGoals = (dashboardData.goals || []).filter(g => g.status === 'active');
   const completedGoals = (dashboardData.goals || []).filter(g => g.status === 'completed');
+
+  // Calculate statistics
+  const totalReviews = chartData.length;
+  const averageNumeric = totalReviews > 0 ? Math.round(chartData.reduce((acc, c) => acc + c.grade, 0) / totalReviews) : 0;
+  const averageLetter = convertNumericToGrade(averageNumeric);
+  const highestNumeric = totalReviews > 0 ? Math.max(...chartData.map(c => c.grade)) : 0;
+  const highestLetter = convertNumericToGrade(highestNumeric);
+  const latestNumeric = totalReviews > 0 ? chartData[totalReviews - 1].grade : 0;
+
+  // Progression trend (delta between last two reviews)
+  const progressionTrend = totalReviews >= 2 
+    ? chartData[totalReviews - 1].grade - chartData[totalReviews - 2].grade 
+    : null;
+
+  // Mock progression data for empty state
+  const mockChartData = [
+    { date: 'Wk 1', fullDate: 'Mock Week 1', grade: 65, originalGrade: 'D+ (Mock)', feedback: 'Initial baseline assessment.' },
+    { date: 'Wk 2', fullDate: 'Mock Week 2', grade: 72, originalGrade: 'C (Mock)', feedback: 'Good recovery tracking, form improving.' },
+    { date: 'Wk 3', fullDate: 'Mock Week 3', grade: 70, originalGrade: 'C- (Mock)', feedback: 'Slight fatigue markers noted on compound lifts.' },
+    { date: 'Wk 4', fullDate: 'Mock Week 4', grade: 82, originalGrade: 'B (Mock)', feedback: 'Excellent response to caloric adjustments.' },
+    { date: 'Wk 5', fullDate: 'Mock Week 5', grade: 88, originalGrade: 'B+ (Mock)', feedback: 'Linear strength progression sustained.' },
+    { date: 'Wk 6', fullDate: 'Mock Week 6', grade: 95, originalGrade: 'A (Mock)', feedback: 'Elite level execution targets met!' },
+  ];
 
   return (
     <div className="w-full min-h-screen bg-[#FAFAFA] text-[#262626] font-sans antialiased relative pt-24 pb-16">
@@ -197,39 +321,136 @@ export default function ClientDashboard({ user }) {
           </div>
         </div>
 
-        {/* GRADE HISTORY CHART */}
-        {chartData.length > 0 && (
-          <div className="bg-white border border-neutral-200/80 rounded-2xl p-6 shadow-sm mb-8">
-            <h2 className="text-sm font-bold text-neutral-900 uppercase mb-4 border-b border-neutral-100 pb-3">
-              Grade History Trend
-            </h2>
-            <div className="w-full h-[300px]">
+        {/* ANALYTICAL PERFORMANCE SECTION */}
+        <div className="bg-white border border-neutral-200/80 rounded-2xl p-6 sm:p-8 shadow-sm mb-8 text-left relative overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4 mb-6">
+            <div>
+              <h2 className="text-sm font-bold text-neutral-900 uppercase">
+                Analytical Performance
+              </h2>
+              <p className="text-xs text-neutral-400 mt-1">
+                Visualizing workout metrics & nutrition progression history
+              </p>
+            </div>
+            {totalReviews > 0 && (
+              <span className="self-start sm:self-center px-3 py-1 text-[10px] font-mono bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full font-bold">
+                {totalReviews} REVIEWS RECORDED
+              </span>
+            )}
+          </div>
+
+          {/* STATISTICS RIBBON */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className="bg-neutral-50 border border-neutral-200/50 p-4 rounded-xl">
+              <span className="text-[10px] font-mono text-neutral-400 font-bold uppercase tracking-wider block">Average Grade</span>
+              <span className="text-lg font-bold text-neutral-800 block mt-1">
+                {totalReviews > 0 ? `${averageNumeric}% (${averageLetter})` : '--'}
+              </span>
+            </div>
+            <div className="bg-neutral-50 border border-neutral-200/50 p-4 rounded-xl">
+              <span className="text-[10px] font-mono text-neutral-400 font-bold uppercase tracking-wider block">Highest Rating</span>
+              <span className="text-lg font-bold text-neutral-800 block mt-1">
+                {totalReviews > 0 ? `${highestLetter} (${highestNumeric}%)` : '--'}
+              </span>
+            </div>
+            <div className="bg-neutral-50 border border-neutral-200/50 p-4 rounded-xl">
+              <span className="text-[10px] font-mono text-neutral-400 font-bold uppercase tracking-wider block">Latest Score</span>
+              <span className="text-lg font-bold text-neutral-800 block mt-1">
+                {totalReviews > 0 ? `${latestNumeric}%` : '--'}
+              </span>
+            </div>
+            <div className="bg-neutral-50 border border-neutral-200/50 p-4 rounded-xl">
+              <span className="text-[10px] font-mono text-neutral-400 font-bold uppercase tracking-wider block">Progression Trend</span>
+              <span className="text-lg font-bold mt-1 block">
+                {totalReviews < 2 ? (
+                  <span className="text-neutral-400 font-medium text-sm">Awaiting reviews</span>
+                ) : progressionTrend > 0 ? (
+                  <span className="text-emerald-600 font-bold flex items-center gap-0.5">
+                    ▲ +{progressionTrend}%
+                  </span>
+                ) : progressionTrend < 0 ? (
+                  <span className="text-rose-600 font-bold flex items-center gap-0.5">
+                    ▼ {progressionTrend}%
+                  </span>
+                ) : (
+                  <span className="text-amber-500 font-bold">
+                    Stable (0%)
+                  </span>
+                )}
+              </span>
+            </div>
+          </div>
+
+          {/* DYNAMIC CHART OR STUNNING EMPTY STATE */}
+          <div className="relative w-full h-[320px]">
+            {totalReviews > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis dataKey="date" stroke="#9CA3AF" style={{ fontSize: '12px' }} />
-                  <YAxis stroke="#9CA3AF" style={{ fontSize: '12px' }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #E5E7EB',
-                      borderRadius: '8px',
-                      padding: '8px'
+                <LineChart data={chartData} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+                  <XAxis dataKey="date" stroke="#9CA3AF" style={{ fontSize: '11px', fontFamily: 'monospace' }} />
+                  <YAxis 
+                    domain={[0, 100]} 
+                    tickFormatter={(tick) => {
+                      if (tick === 100) return 'A+';
+                      if (tick === 90) return 'A';
+                      if (tick === 80) return 'B';
+                      if (tick === 70) return 'C';
+                      if (tick === 60) return 'D';
+                      if (tick === 50) return 'F';
+                      return '';
                     }}
-                    formatter={(value) => [value, 'Grade']}
+                    stroke="#9CA3AF" 
+                    style={{ fontSize: '11px', fontFamily: 'monospace' }} 
                   />
+                  <Tooltip content={<CustomTooltip />} />
                   <Line
                     type="monotone"
                     dataKey="grade"
                     stroke="#10B981"
-                    strokeWidth={2}
-                    dot={{ fill: '#10B981', r: 4 }}
+                    strokeWidth={3}
+                    dot={{ fill: '#10B981', stroke: '#ffffff', strokeWidth: 2, r: 6 }}
+                    activeDot={{ fill: '#059669', stroke: '#ffffff', strokeWidth: 2, r: 8 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
-            </div>
+            ) : (
+              <>
+                {/* Mock Chart Background */}
+                <div className="absolute inset-0 opacity-[0.08] select-none pointer-events-none">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={mockChartData} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#CCCCCC" vertical={false} />
+                      <XAxis dataKey="date" stroke="#9CA3AF" style={{ fontSize: '11px', fontFamily: 'monospace' }} />
+                      <YAxis domain={[0, 100]} stroke="#9CA3AF" style={{ fontSize: '11px', fontFamily: 'monospace' }} />
+                      <Line
+                        type="monotone"
+                        dataKey="grade"
+                        stroke="#9CA3AF"
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={{ fill: '#D1D5DB', r: 4 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Centered Glassmorphism Alert Card */}
+                <div className="absolute inset-0 flex items-center justify-center p-4">
+                  <div className="bg-white/85 backdrop-blur-xs border border-neutral-200/60 rounded-2xl p-6 sm:p-8 max-w-md text-center shadow-lg space-y-3">
+                    <div className="h-12 w-12 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-xl mx-auto animate-pulse">
+                      📈
+                    </div>
+                    <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wide">
+                      Awaiting Coach Evaluation
+                    </h3>
+                    <p className="text-xs text-neutral-500 leading-relaxed">
+                      Your progression line-chart and statistical trend vectors will populate here as soon as your coach records your first manual rating. Keep logging your metrics!
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-        )}
+        </div>
 
         {/* ACTIVE GOALS */}
         {activeGoals.length > 0 && (

@@ -36,14 +36,15 @@ const signupUser = async (req, res) => {
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     const user = await User.signup(username, email, password);
     
-    if (
-      requestedRole === 'admin' || 
-      email.endsWith('@4fitnessadmin.com') || 
-      email === 'ceo@4fitness.com'
-    ) {
-      user.role = 'admin'; 
+    if (requestedRole === 'admin') {
+      const existingAdmin = await User.findOne({ role: 'admin' });
+      if (existingAdmin) {
+        user.role = 'client';
+      } else {
+        user.role = 'admin';
+      }
     } else {
-      user.role = 'client'; 
+      user.role = 'client';
     }
 
     user.verificationCode = verificationCode;
