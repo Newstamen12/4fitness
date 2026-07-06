@@ -25,7 +25,6 @@ dns.setServers(['8.8.8.8', '8.8.4.4']);
 // 4. INITIALIZE THE EXPRESS APP
 // ==========================================
 const app = express();
-const port = process.env.PORT || 4000;
 
 // ==========================================
 // 5. GLOBAL MIDDLEWARE
@@ -43,15 +42,20 @@ app.use((req, res, next) => {
     next();
 });
 
+// 📄 Robust global parser that captures raw body for Stripe signatures
+// without blocking standard JSON parsing for your other routes.
+app.use(express.json({
+    verify: (req, res, buf) => {
+        if (req.originalUrl.startsWith('/api/payments/webhook')) {
+            req.rawBody = buf.toString();
+        }
+    }
+}));
+
 // ==========================================
 // 6. ROUTE DECLARATIONS
 // ==========================================
-// 💳 Mount payments with a raw text parser for webhook signature verification
-app.use('/api/payments', express.text({ type: 'application/json' }), paymentRoutes);
-
-// 📄 Standard JSON body parsing for other routes
-app.use(express.json()); 
-
+app.use('/api/payments', paymentRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/workouts', workoutRoutes);
 
@@ -64,10 +68,8 @@ app.get('/', (req, res) => {
 // ==========================================
 const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/fitness';
 
-mongoose.connect(mongoUri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+// Fixed: Removed deprecated useNewUrlParser and useUnifiedTopology options
+mongoose.connect(mongoUri)
   .then(() => {
     console.log('Connected to MongoDB Database');
   })
