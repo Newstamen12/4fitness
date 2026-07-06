@@ -8,7 +8,7 @@ const helmet = require('helmet');
 
 const paymentRoutes = require('./routes/paymentsRoutes');
 const workoutRoutes = require('./routes/workout'); 
-const userRoutes = require('./routes/User');
+const userRoutes = require('./routes/user');
 
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
