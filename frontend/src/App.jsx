@@ -79,13 +79,13 @@ function LandingPage({ setUser }) {
               </div>
             </div>
 
-            <div className="mt-5 rounded-2xl border border-white/10 bg-gradient-to-br from-slate-800/90 to-slate-900/90 p-4">
+            <div className="mt-5 rounded-2xl border border-white/10 bg-linear-to-br from-slate-800/90 to-slate-900/90 p-4">
               <div className="flex items-center justify-between text-sm text-slate-300">
                 <span>Weekly readiness</span>
                 <span className="font-semibold text-white">82%</span>
               </div>
               <div className="mt-3 h-2 rounded-full bg-slate-700">
-                <div className="h-2 w-[82%] rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400"></div>
+                <div className="h-2 w-[82%] rounded-full bg-linear-to-r from-emerald-400 to-cyan-400"></div>
               </div>
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3">

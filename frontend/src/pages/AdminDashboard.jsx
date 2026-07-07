@@ -1,104 +1,4 @@
 import { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { apiUrl } from '../config/api';
-
-// Utility to parse mixed grade strings into a 0-100 scale
-function convertGradeToNumeric(grade) {
-  if (!grade) return 0;
-  let str = String(grade).trim().toLowerCase();
-  
-  // 1. Check if it is a fraction (e.g. 9/10, 8.5/10)
-  if (str.includes('/')) {
-    const parts = str.split('/');
-    if (parts.length === 2) {
-      const num = parseFloat(parts[0]);
-      const den = parseFloat(parts[1]);
-      if (!isNaN(num) && !isNaN(den) && den > 0) {
-        return Math.min(100, Math.round((num / den) * 100));
-      }
-    }
-  }
-  
-  // 2. Check if it ends with %
-  if (str.endsWith('%')) {
-    const val = parseFloat(str);
-    if (!isNaN(val)) return Math.min(100, Math.max(0, val));
-  }
-  
-  // 3. Try parsing as a raw number
-  const parsedNum = parseFloat(str);
-  if (!isNaN(parsedNum)) {
-    if (parsedNum <= 10 && parsedNum >= 0) {
-      return Math.round(parsedNum * 10);
-    }
-    return Math.min(100, Math.max(0, Math.round(parsedNum)));
-  }
-
-  // 4. Letter grades mapping
-  const letterMap = {
-    'a+': 98, 'a': 95, 'a-': 90,
-    'b+': 88, 'b': 85, 'b-': 80,
-    'c+': 78, 'c': 75, 'c-': 70,
-    'd+': 68, 'd': 65, 'd-': 60,
-    'f': 50
-  };
-  
-  for (const letter in letterMap) {
-    if (str.startsWith(letter)) {
-      return letterMap[letter];
-    }
-  }
-  
-  // 5. Descriptive keywords matching
-  if (str.includes('elite') || str.includes('excellent') || str.includes('outstanding') || str.includes('perfect')) {
-    return 95;
-  }
-  if (str.includes('very good') || str.includes('strong') || str.includes('great') || str.includes('good')) {
-    return 85;
-  }
-  if (str.includes('average') || str.includes('satisfactory') || str.includes('decent') || str.includes('fair') || str.includes('medium')) {
-    return 70;
-  }
-  if (str.includes('poor') || str.includes('weak') || str.includes('subpar') || str.includes('bad')) {
-    return 55;
-  }
-  if (str.includes('fail') || str.includes('unsatisfactory') || str.includes('terrible')) {
-    return 40;
-  }
-
-  return 50;
-}
-
-function convertNumericToGrade(val) {
-  if (val >= 90) return 'A';
-  if (val >= 80) return 'B';
-  if (val >= 70) return 'C';
-  if (val >= 60) return 'D';
-  return 'F';
-}
-
-const CustomTooltip = ({ active, payload }) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="bg-white border border-neutral-200/80 rounded-xl p-4 shadow-md text-left font-sans max-w-xs">
-        <p className="text-[10px] font-mono text-neutral-400 font-bold uppercase tracking-wider mb-1">{data.fullDate}</p>
-        <p className="text-sm font-bold text-neutral-900">
-          Normalized Score: <span className="text-emerald-600 font-mono">{data.grade}%</span>
-        </p>
-        <p className="text-xs text-neutral-600 mt-1">
-          <strong className="text-neutral-700">Coach Grade:</strong> {data.originalGrade}
-        </p>
-        {data.feedback && (
-          <p className="text-xs text-neutral-500 mt-2 italic border-t border-neutral-100 pt-2 line-clamp-3">
-            "{data.feedback}"
-          </p>
-        )}
-      </div>
-    );
-  }
-  return null;
-};
 
 // 📊 1. LOCAL INLINE SWOT ENGINE COMPONENT
 function SwotEngine({ clientName, swotData, onChange, onSave, submitting }) {
@@ -214,14 +114,6 @@ export default function AdminDashboard({ user }) {
   const [swotData, setSwotData] = useState({ strengths: '', weaknesses: '', opportunities: '', threats: '' });
   const [swotSubmitting, setSwotSubmitting] = useState(false);
 
-  // Goal management state hooks
-  const [goalTitle, setGoalTitle] = useState('');
-  const [goalDescription, setGoalDescription] = useState('');
-  const [goalTarget, setGoalTarget] = useState('');
-  const [goalDeadline, setGoalDeadline] = useState('');
-  const [goalSubmitting, setGoalSubmitting] = useState(false);
-  const [showGoalForm, setShowGoalForm] = useState(false);
-
   // 📝 Admin Data Seeding Engine state hooks
   const [seeding, setSeeding] = useState(false);
 
@@ -234,7 +126,7 @@ export default function AdminDashboard({ user }) {
     const fetchClients = async () => {
       setLoading(true);
       try {
-        const response = await fetch(apiUrl('/api/user/profiles'), {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/user/profiles`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -255,7 +147,7 @@ export default function AdminDashboard({ user }) {
     const fetchSwotMatrix = async () => {
       if (!selectedClient) return;
       try {
-        const response = await fetch(apiUrl(`/api/user/swot/${selectedClient._id}`), {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/user/swot/${selectedClient._id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -294,7 +186,7 @@ export default function AdminDashboard({ user }) {
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await fetch(apiUrl('/api/user/swot'), {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/user/swot`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -311,7 +203,8 @@ export default function AdminDashboard({ user }) {
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to sync structural SWOT matrix.' });
       }
-    } catch (error) { console.error(error);
+    } catch (error) { 
+      console.error(error);
       setMessage({ type: 'error', text: 'Network configuration mapping failure.' });
     } finally {
       setSwotSubmitting(false);
@@ -326,7 +219,7 @@ export default function AdminDashboard({ user }) {
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await fetch(apiUrl('/api/user/grade-performance'), {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/user/grade-performance`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -346,7 +239,8 @@ export default function AdminDashboard({ user }) {
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to submit metrics vectors.' });
       }
-    } catch (error) { console.error(error);
+    } catch (error) { 
+      console.error(error);
       setMessage({ type: 'error', text: 'Network connection handshake failure.' });
     } finally {
       setSubmitting(false);
@@ -360,7 +254,7 @@ export default function AdminDashboard({ user }) {
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await fetch(apiUrl(`/api/user/grade/manual/${selectedClient._id}`), {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/user/grade/manual/${selectedClient._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -396,53 +290,6 @@ export default function AdminDashboard({ user }) {
   };
 
   // 🎯 SET FITNESS GOAL FOR CLIENT
-  const handleSetGoal = async (e) => {
-    e.preventDefault();
-    if (!selectedClient || !goalTitle) {
-      setMessage({ type: 'error', text: 'Select a client and enter a goal title' });
-      return;
-    }
-
-    setGoalSubmitting(true);
-    setMessage({ type: '', text: '' });
-
-    try {
-      const response = await fetch(apiUrl('/api/user/goals/set'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          clientId: selectedClient._id,
-          title: goalTitle,
-          description: goalDescription,
-          target: goalTarget,
-          deadline: goalDeadline || null
-        })
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        setMessage({ type: 'success', text: `Goal set for ${selectedClient.username}!` });
-        setGoalTitle('');
-        setGoalDescription('');
-        setGoalTarget('');
-        setGoalDeadline('');
-        setShowGoalForm(false);
-        // Refresh client data
-        setSelectedClient(data.updatedUser);
-      } else {
-        setMessage({ type: 'error', text: data.error || 'Failed to set goal' });
-      }
-    } catch (error) {
-      console.error(error);
-      setMessage({ type: 'error', text: 'Network error setting goal' });
-    } finally {
-      setGoalSubmitting(false);
-    }
-  };
-
   // 📝 Process Seed Data Injections via Management Action Bar
   const handleInjectSeeds = async () => {
     if (!selectedClient) {
@@ -454,7 +301,7 @@ export default function AdminDashboard({ user }) {
     setSeeding(true);
     setMessage({ type: '', text: '' });
     try {
-      const response = await fetch(apiUrl('/api/user/auto-feedback'), {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/user/auto-feedback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -474,42 +321,13 @@ export default function AdminDashboard({ user }) {
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed execution structural seeding pipeline. Route not configured on Server backend.' });
       }
-    } catch (error) { console.error(error);
+    } catch (error) { 
+      console.error(error);
       setMessage({ type: 'error', text: 'Seeding network route interface error.' });
     } finally {
       setSeeding(false);
     }
   };
-
-  // Selected client chart calculations
-  const clientChartData = ((selectedClient && selectedClient.gradeHistory) || [])
-    .map((entry) => ({
-      date: new Date(entry.ratedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      fullDate: new Date(entry.ratedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      grade: convertGradeToNumeric(entry.grade),
-      originalGrade: entry.grade,
-      feedback: entry.feedback || ''
-    }));
-
-  const clientTotalReviews = clientChartData.length;
-  const clientAverageNumeric = clientTotalReviews > 0 ? Math.round(clientChartData.reduce((acc, c) => acc + c.grade, 0) / clientTotalReviews) : 0;
-  const clientAverageLetter = convertNumericToGrade(clientAverageNumeric);
-  const clientHighestNumeric = clientTotalReviews > 0 ? Math.max(...clientChartData.map(c => c.grade)) : 0;
-  const clientHighestLetter = convertNumericToGrade(clientHighestNumeric);
-  const clientLatestNumeric = clientTotalReviews > 0 ? clientChartData[clientTotalReviews - 1].grade : 0;
-
-  const clientProgressionTrend = clientTotalReviews >= 2 
-    ? clientChartData[clientTotalReviews - 1].grade - clientChartData[clientTotalReviews - 2].grade 
-    : null;
-
-  const mockChartData = [
-    { date: 'Wk 1', fullDate: 'Mock Week 1', grade: 65, originalGrade: 'D+ (Mock)', feedback: 'Initial baseline assessment.' },
-    { date: 'Wk 2', fullDate: 'Mock Week 2', grade: 72, originalGrade: 'C (Mock)', feedback: 'Good recovery tracking, form improving.' },
-    { date: 'Wk 3', fullDate: 'Mock Week 3', grade: 70, originalGrade: 'C- (Mock)', feedback: 'Slight fatigue markers noted on compound lifts.' },
-    { date: 'Wk 4', fullDate: 'Mock Week 4', grade: 82, originalGrade: 'B (Mock)', feedback: 'Excellent response to caloric adjustments.' },
-    { date: 'Wk 5', fullDate: 'Mock Week 5', grade: 88, originalGrade: 'B+ (Mock)', feedback: 'Linear strength progression sustained.' },
-    { date: 'Wk 6', fullDate: 'Mock Week 6', grade: 95, originalGrade: 'A (Mock)', feedback: 'Elite level execution targets met!' },
-  ];
 
   return (
     <div className="w-full min-h-screen bg-[#FAFAFA] text-[#262626] font-sans antialiased relative pt-24 pb-16">
@@ -634,361 +452,106 @@ export default function AdminDashboard({ user }) {
                       </div>
 
                       <form onSubmit={handleGradeSubmit} className="space-y-5">
-                      <div className="space-y-2">
-                        <label className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-500 block">Workout Performance Metrics</label>
-                        <textarea
-                          rows="3"
-                          placeholder="e.g., Progressive overload targets achieved. Bench press mechanics sustained at higher execution bounds."
-                          className="w-full bg-[#FAFAFA] border border-neutral-200 p-3.5 rounded-xl text-neutral-800 font-mono text-xs focus:outline-none focus:border-rose-300 focus:bg-white transition-all resize-none shadow-3xs"
-                          value={workoutMetrics}
-                          onChange={(e) => setWorkoutMetrics(e.target.value)}
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-500 block">Nutrition & Dietary Thresholds</label>
-                        <textarea
-                          rows="3"
-                          placeholder="e.g., Caloric surplus managed cleanly. Macro targets hit within precise 5% margin constraints."
-                          className="w-full bg-[#FAFAFA] border border-neutral-200 p-3.5 rounded-xl text-neutral-800 font-mono text-xs focus:outline-none focus:border-rose-300 focus:bg-white transition-all resize-none shadow-3xs"
-                          value={dietMetrics}
-                          onChange={(e) => setDietMetrics(e.target.value)}
-                          required
-                        />
-                      </div>
-
-                      {message.text && message.type && (
-                        <div className={`p-3.5 rounded-xl text-xs font-mono border ${
-                          message.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-rose-50 border-rose-200 text-rose-700'
-                        }`}>
-                          {message.text}
-                        </div>
-                      )}
-
-                      <button 
-                        disabled={submitting} 
-                        className="w-full bg-neutral-900 hover:bg-neutral-800 text-white font-mono font-bold py-3.5 rounded-xl uppercase text-xs tracking-wider transition-all disabled:opacity-40 shadow-xs active:scale-[0.99]"
-                      >
-                        {submitting ? "Analyzing Metrics Array via Gemini..." : "Compute Performance Grade & Log"}
-                      </button>
-                    </form>
-
-                    <form onSubmit={handleManualGradeSubmit} className="space-y-5 bg-neutral-50 border border-neutral-200 rounded-2xl p-6">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <h3 className="text-sm font-bold text-neutral-900 uppercase">Manual Judgement Entry</h3>
-                          <p className="text-xs text-neutral-500">Save a coach grade and written feedback for this customer.</p>
-                        </div>
-                        <span className="text-[10px] uppercase font-mono tracking-wider text-neutral-400 bg-white border border-neutral-200 rounded-full px-3 py-1">
-                          Admin-only
-                        </span>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Judgment Grade</label>
-                        <input
-                          type="text"
-                          value={manualGrade}
-                          onChange={(e) => setManualGrade(e.target.value)}
-                          placeholder="e.g. A+, 9/10, Strong execution"
-                          className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-3 text-sm text-neutral-900 focus:outline-none focus:border-rose-300 transition-all"
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Judgment Feedback</label>
-                        <textarea
-                          rows="4"
-                          value={manualFeedback}
-                          onChange={(e) => setManualFeedback(e.target.value)}
-                          placeholder="Write a short performance summary and next steps for the client."
-                          className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-3 text-sm text-neutral-900 focus:outline-none focus:border-rose-300 transition-all resize-none"
-                          required
-                        />
-                      </div>
-
-                      <button
-                        type="submit"
-                        disabled={manualSubmitting}
-                        className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-mono font-bold py-3.5 rounded-xl uppercase text-xs tracking-wider transition-all disabled:opacity-40"
-                      >
-                        {manualSubmitting ? 'Saving Admin Judgment...' : 'Save Admin Judgment'}
-                      </button>
-                    </form>
-
-                    {/* Current Active Logs Ledger Mirror */}
-                    {selectedClient.aiAnalysis && (
-                      <div className="mt-6 pt-5 border-t border-neutral-100 space-y-3">
-                        <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-400">Admin Judgment Summary</h4>
-                        <div className="bg-[#FAFAFA] p-4 rounded-xl border border-neutral-200 space-y-3 shadow-3xs">
-                          <div className="flex items-center justify-between gap-4">
-                            <span className="text-sm font-semibold text-neutral-900">Grade</span>
-                            <span className="text-[11px] uppercase tracking-wider text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">{selectedClient.aiAnalysis.grade || 'Pending'}</span>
-                          </div>
-                          <p className="text-[11px] text-neutral-500 whitespace-pre-wrap">{selectedClient.aiAnalysis.feedback || 'No coach feedback has been entered yet.'}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedClient.performanceAnalysis && (
-                      <div className="mt-6 pt-5 border-t border-neutral-100 space-y-2">
-                        <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-400">Active Database Entry Profile</h4>
-                        <div className="bg-[#FAFAFA] p-4 rounded-xl border border-neutral-200 font-mono text-[11px] text-neutral-500 max-h-40 overflow-y-auto shadow-3xs">
-                          <pre className="whitespace-pre-wrap">{JSON.stringify(selectedClient.performanceAnalysis, null, 2)}</pre>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-                {/* ANALYTICAL PERFORMANCE SECTION */}
-                <div className="bg-white border border-neutral-200/80 rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xs mt-8 text-left relative overflow-hidden">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
-                    <div>
-                      <h2 className="text-lg font-bold tracking-tight text-neutral-900 uppercase">
-                        Client Performance Analytics
-                      </h2>
-                      <p className="text-xs text-neutral-400 mt-1">
-                        Historical coach ratings and macro progression vectors for: <span className="text-neutral-700 font-mono font-semibold">{selectedClient.username}</span>
-                      </p>
-                    </div>
-                    {clientTotalReviews > 0 && (
-                      <span className="self-start sm:self-center px-3 py-1 text-[10px] font-mono bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full font-bold">
-                        {clientTotalReviews} REVIEWS RECORDED
-                      </span>
-                    )}
-                  </div>
-
-                  {/* STATISTICS RIBBON */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-neutral-50 border border-neutral-200/50 p-4 rounded-xl">
-                      <span className="text-[10px] font-mono text-neutral-400 font-bold uppercase tracking-wider block">Average Grade</span>
-                      <span className="text-lg font-bold text-neutral-800 block mt-1">
-                        {clientTotalReviews > 0 ? `${clientAverageNumeric}% (${clientAverageLetter})` : '--'}
-                      </span>
-                    </div>
-                    <div className="bg-neutral-50 border border-neutral-200/50 p-4 rounded-xl">
-                      <span className="text-[10px] font-mono text-neutral-400 font-bold uppercase tracking-wider block">Highest Rating</span>
-                      <span className="text-lg font-bold text-neutral-800 block mt-1">
-                        {clientTotalReviews > 0 ? `${clientHighestLetter} (${clientHighestNumeric}%)` : '--'}
-                      </span>
-                    </div>
-                    <div className="bg-neutral-50 border border-neutral-200/50 p-4 rounded-xl">
-                      <span className="text-[10px] font-mono text-neutral-400 font-bold uppercase tracking-wider block">Latest Score</span>
-                      <span className="text-lg font-bold text-neutral-800 block mt-1">
-                        {clientTotalReviews > 0 ? `${clientLatestNumeric}%` : '--'}
-                      </span>
-                    </div>
-                    <div className="bg-neutral-50 border border-neutral-200/50 p-4 rounded-xl">
-                      <span className="text-[10px] font-mono text-neutral-400 font-bold uppercase tracking-wider block">Progression Trend</span>
-                      <span className="text-lg font-bold mt-1 block">
-                        {clientTotalReviews < 2 ? (
-                          <span className="text-neutral-400 font-medium text-sm">Awaiting reviews</span>
-                        ) : clientProgressionTrend > 0 ? (
-                          <span className="text-emerald-600 font-bold flex items-center gap-0.5">
-                            ▲ +{clientProgressionTrend}%
-                          </span>
-                        ) : clientProgressionTrend < 0 ? (
-                          <span className="text-rose-600 font-bold flex items-center gap-0.5">
-                            ▼ {clientProgressionTrend}%
-                          </span>
-                        ) : (
-                          <span className="text-amber-500 font-bold">
-                            Stable (0%)
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* DYNAMIC CHART OR STUNNING EMPTY STATE */}
-                  <div className="relative w-full h-[320px] pt-4">
-                    {clientTotalReviews > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={clientChartData} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
-                          <XAxis dataKey="date" stroke="#9CA3AF" style={{ fontSize: '11px', fontFamily: 'monospace' }} />
-                          <YAxis 
-                            domain={[0, 100]} 
-                            tickFormatter={(tick) => {
-                              if (tick === 100) return 'A+';
-                              if (tick === 90) return 'A';
-                              if (tick === 80) return 'B';
-                              if (tick === 70) return 'C';
-                              if (tick === 60) return 'D';
-                              if (tick === 50) return 'F';
-                              return '';
-                            }}
-                            stroke="#9CA3AF" 
-                            style={{ fontSize: '11px', fontFamily: 'monospace' }} 
-                          />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Line
-                            type="monotone"
-                            dataKey="grade"
-                            stroke="#10B981"
-                            strokeWidth={3}
-                            dot={{ fill: '#10B981', stroke: '#ffffff', strokeWidth: 2, r: 6 }}
-                            activeDot={{ fill: '#059669', stroke: '#ffffff', strokeWidth: 2, r: 8 }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <>
-                        {/* Mock Chart Background */}
-                        <div className="absolute inset-0 opacity-[0.08] select-none pointer-events-none">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={mockChartData} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#CCCCCC" vertical={false} />
-                              <XAxis dataKey="date" stroke="#9CA3AF" style={{ fontSize: '11px', fontFamily: 'monospace' }} />
-                              <YAxis domain={[0, 100]} stroke="#9CA3AF" style={{ fontSize: '11px', fontFamily: 'monospace' }} />
-                              <Line
-                                type="monotone"
-                                dataKey="grade"
-                                stroke="#9CA3AF"
-                                strokeWidth={2}
-                                strokeDasharray="5 5"
-                                dot={{ fill: '#D1D5DB', r: 4 }}
-                              />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
-                        {/* Centered Glassmorphism Alert Card */}
-                        <div className="absolute inset-0 flex items-center justify-center p-4">
-                          <div className="bg-white/85 backdrop-blur-xs border border-neutral-200/60 rounded-2xl p-6 sm:p-8 max-w-md text-center shadow-lg space-y-3">
-                            <div className="h-12 w-12 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center text-xl mx-auto animate-pulse">
-                              📈
-                            </div>
-                            <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wide">
-                              No Ratings Recorded Yet
-                            </h3>
-                            <p className="text-xs text-neutral-500 leading-relaxed">
-                              This client does not have any historical performance scores logged in their profile directory. Use the judgment forms above to submit their first review.
-                            </p>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* INTEGRATED DYNAMIC SWOT ANALYSIS PANEL ENTRY */}
-                <SwotEngine 
-                  clientName={selectedClient.username}
-                  swotData={swotData}
-                  onChange={handleSwotChange}
-                  onSave={handleSaveSwot}
-                  submitting={swotSubmitting}
-                />
-
-                {/* 🎯 GOAL MANAGEMENT SECTION */}
-                <div className="bg-white border border-neutral-200/80 rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xs">
-                  <div className="flex items-center justify-between border-b border-neutral-100 pb-4">
-                    <div>
-                      <h2 className="text-lg font-bold tracking-tight text-neutral-900 uppercase">
-                        Fitness Goals
-                      </h2>
-                      <p className="text-xs text-neutral-400 mt-1 font-mono">
-                        Set and track client performance objectives
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setShowGoalForm(!showGoalForm)}
-                      className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-xs font-bold px-4 py-2 rounded-lg uppercase transition-all"
-                    >
-                      {showGoalForm ? '✕ Cancel' : '+ Add Goal'}
-                    </button>
-                  </div>
-
-                  {showGoalForm && (
-                    <form onSubmit={handleSetGoal} className="space-y-4 bg-amber-50 border border-amber-100 rounded-2xl p-4">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Goal Title</label>
-                        <input
-                          type="text"
-                          value={goalTitle}
-                          onChange={(e) => setGoalTitle(e.target.value)}
-                          placeholder="e.g., Increase Bench Press to 120kg"
-                          className="w-full bg-white border border-neutral-200 rounded-lg px-4 py-2 text-sm text-neutral-900 focus:outline-none focus:border-amber-400"
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Description</label>
-                        <textarea
-                          value={goalDescription}
-                          onChange={(e) => setGoalDescription(e.target.value)}
-                          placeholder="Additional details about this goal..."
-                          rows="2"
-                          className="w-full bg-white border border-neutral-200 rounded-lg px-4 py-2 text-sm text-neutral-900 focus:outline-none focus:border-amber-400 resize-none"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-2">
-                          <label className="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Target</label>
+                          <label className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-500 block">Workout Performance Metrics</label>
+                          <textarea
+                            rows="3"
+                            placeholder="e.g., Progressive overload targets achieved. Bench press mechanics sustained at higher execution bounds."
+                            className="w-full bg-[#FAFAFA] border border-neutral-200 p-3.5 rounded-xl text-neutral-800 font-mono text-xs focus:outline-none focus:border-rose-300 focus:bg-white transition-all resize-none shadow-3xs"
+                            value={workoutMetrics}
+                            onChange={(e) => setWorkoutMetrics(e.target.value)}
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-500 block">Nutrition & Dietary Thresholds</label>
+                          <textarea
+                            rows="3"
+                            placeholder="e.g., Caloric surplus managed cleanly. Macro targets hit within precise 5% margin constraints."
+                            className="w-full bg-[#FAFAFA] border border-neutral-200 p-3.5 rounded-xl text-neutral-800 font-mono text-xs focus:outline-none focus:border-rose-300 focus:bg-white transition-all resize-none shadow-3xs"
+                            value={dietMetrics}
+                            onChange={(e) => setDietMetrics(e.target.value)}
+                            required
+                          />
+                        </div>
+
+                        {message.text && message.type && (
+                          <div className={`p-3.5 rounded-xl text-xs font-mono border ${
+                            message.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-rose-50 border-rose-200 text-rose-700'
+                          }`}>
+                            {message.text}
+                          </div>
+                        )}
+
+                        <button 
+                          disabled={submitting} 
+                          className="w-full bg-neutral-900 hover:bg-neutral-800 text-white font-mono font-bold py-3.5 rounded-xl uppercase text-xs tracking-wider transition-all disabled:opacity-40 shadow-xs active:scale-[0.99]"
+                        >
+                          {submitting ? "Analyzing Metrics Array via Gemini..." : "Compute Performance Grade & Log"}
+                        </button>
+                      </form>
+
+                      <form onSubmit={handleManualGradeSubmit} className="space-y-5 bg-neutral-50 border border-neutral-200 rounded-2xl p-6">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <h3 className="text-sm font-bold text-neutral-900 uppercase">Manual Judgement Entry</h3>
+                            <p className="text-xs text-neutral-500">Save a coach grade and written feedback for this customer.</p>
+                          </div>
+                          <span className="text-[10px] uppercase font-mono tracking-wider text-neutral-400 bg-white border border-neutral-200 rounded-full px-3 py-1">
+                            Admin-only
+                          </span>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Judgment Grade</label>
                           <input
                             type="text"
-                            value={goalTarget}
-                            onChange={(e) => setGoalTarget(e.target.value)}
-                            placeholder="e.g., 120kg"
-                            className="w-full bg-white border border-neutral-200 rounded-lg px-4 py-2 text-sm text-neutral-900 focus:outline-none focus:border-amber-400"
+                            value={manualGrade}
+                            onChange={(e) => setManualGrade(e.target.value)}
+                            placeholder="e.g. A+, 9/10, Strong execution"
+                            className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-3 text-sm text-neutral-900 focus:outline-none focus:border-rose-300 transition-all"
+                            required
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Deadline</label>
-                          <input
-                            type="date"
-                            value={goalDeadline}
-                            onChange={(e) => setGoalDeadline(e.target.value)}
-                            className="w-full bg-white border border-neutral-200 rounded-lg px-4 py-2 text-sm text-neutral-900 focus:outline-none focus:border-amber-400"
+                          <label className="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Judgment Feedback</label>
+                          <textarea
+                            rows="4"
+                            value={manualFeedback}
+                            onChange={(e) => setManualFeedback(e.target.value)}
+                            placeholder="Write a short performance summary and next steps for the client."
+                            className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-3 text-sm text-neutral-900 focus:outline-none focus:border-rose-300 transition-all resize-none"
+                            required
                           />
                         </div>
-                      </div>
 
-                      <button
-                        type="submit"
-                        disabled={goalSubmitting}
-                        className="w-full bg-amber-600 hover:bg-amber-500 text-white font-mono text-xs font-bold py-3 rounded-lg uppercase transition-all disabled:opacity-40"
-                      >
-                        {goalSubmitting ? 'Setting Goal...' : 'Set Goal for Client'}
-                      </button>
-                    </form>
-                  )}
+                        <button
+                          type="submit"
+                          disabled={manualSubmitting}
+                          className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-mono font-bold py-3.5 rounded-xl uppercase text-xs tracking-wider transition-all disabled:opacity-40"
+                        >
+                          {manualSubmitting ? 'Saving Admin Judgment...' : 'Save Admin Judgment'}
+                        </button>
+                      </form>
 
-                  {selectedClient.goals && selectedClient.goals.length > 0 && (
-                    <div className="space-y-3 mt-4">
-                      <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-500 px-2">Active Goals</h3>
-                      {selectedClient.goals.map((goal, idx) => (
-                        <div key={idx} className="bg-amber-50 border border-amber-100 rounded-lg p-3 space-y-1">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <p className="text-xs font-bold text-neutral-900">{goal.title}</p>
-                              {goal.description && <p className="text-[11px] text-neutral-600 mt-0.5">{goal.description}</p>}
-                            </div>
-                            <span className={`text-[9px] font-mono px-2 py-0.5 rounded whitespace-nowrap ${
-                              goal.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : goal.status === 'cancelled' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
-                            }`}>
-                              {goal.status}
-                            </span>
-                          </div>
-                          {goal.target && <p className="text-[10px] text-neutral-500"><strong>Target:</strong> {goal.target}</p>}
-                          {goal.deadline && <p className="text-[10px] text-neutral-500"><strong>Due:</strong> {new Date(goal.deadline).toLocaleDateString()}</p>}
-                        </div>
-                      ))}
+                      {/* 📊 SWOT Component Rendering Section */}
+                      <SwotEngine 
+                        clientName={selectedClient.username}
+                        swotData={swotData}
+                        onChange={handleSwotChange}
+                        onSave={handleSaveSwot}
+                        submitting={swotSubmitting}
+                      />
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </>
             )}
           </div>
-
         </div>
+
       </div>
     </div>
   );

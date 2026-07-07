@@ -1,81 +1,6 @@
 import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { apiUrl } from '../config/api';
-
-// Utility to parse mixed grade strings into a 0-100 scale
-export function convertGradeToNumeric(grade) {
-  if (!grade) return 0;
-  let str = String(grade).trim().toLowerCase();
-  
-  // 1. Check if it is a fraction (e.g. 9/10, 8.5/10)
-  if (str.includes('/')) {
-    const parts = str.split('/');
-    if (parts.length === 2) {
-      const num = parseFloat(parts[0]);
-      const den = parseFloat(parts[1]);
-      if (!isNaN(num) && !isNaN(den) && den > 0) {
-        return Math.min(100, Math.round((num / den) * 100));
-      }
-    }
-  }
-  
-  // 2. Check if it ends with %
-  if (str.endsWith('%')) {
-    const val = parseFloat(str);
-    if (!isNaN(val)) return Math.min(100, Math.max(0, val));
-  }
-  
-  // 3. Try parsing as a raw number
-  const parsedNum = parseFloat(str);
-  if (!isNaN(parsedNum)) {
-    if (parsedNum <= 10 && parsedNum >= 0) {
-      return Math.round(parsedNum * 10);
-    }
-    return Math.min(100, Math.max(0, Math.round(parsedNum)));
-  }
-
-  // 4. Letter grades mapping
-  const letterMap = {
-    'a+': 98, 'a': 95, 'a-': 90,
-    'b+': 88, 'b': 85, 'b-': 80,
-    'c+': 78, 'c': 75, 'c-': 70,
-    'd+': 68, 'd': 65, 'd-': 60,
-    'f': 50
-  };
-  
-  for (const letter in letterMap) {
-    if (str.startsWith(letter)) {
-      return letterMap[letter];
-    }
-  }
-  
-  // 5. Descriptive keywords matching
-  if (str.includes('elite') || str.includes('excellent') || str.includes('outstanding') || str.includes('perfect')) {
-    return 95;
-  }
-  if (str.includes('very good') || str.includes('strong') || str.includes('great') || str.includes('good')) {
-    return 85;
-  }
-  if (str.includes('average') || str.includes('satisfactory') || str.includes('decent') || str.includes('fair') || str.includes('medium')) {
-    return 70;
-  }
-  if (str.includes('poor') || str.includes('weak') || str.includes('subpar') || str.includes('bad')) {
-    return 55;
-  }
-  if (str.includes('fail') || str.includes('unsatisfactory') || str.includes('terrible')) {
-    return 40;
-  }
-
-  return 50;
-}
-
-export function convertNumericToGrade(val) {
-  if (val >= 90) return 'A';
-  if (val >= 80) return 'B';
-  if (val >= 70) return 'C';
-  if (val >= 60) return 'D';
-  return 'F';
-}
+import { convertGradeToNumeric, convertNumericToGrade } from '../utils/gradeUtils';
 
 const CustomTooltip = ({ active, payload }) => {
   if (active && payload && payload.length) {
@@ -107,11 +32,14 @@ export default function ClientDashboard({ user }) {
   const [notifPrefs, setNotifPrefs] = useState({ onGradeUpdate: true, onFeedback: true, onGoalSet: true });
   const token = user?.token || user?.user?.token;
 
+  // Modern environment configuration setup with clean fallback bounds
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+
   useEffect(() => {
     const fetchDashboard = async () => {
       setLoading(true);
       try {
-        const response = await fetch(apiUrl('/api/user/dashboard'), {
+        const response = await fetch(`${baseUrl}/api/user/dashboard`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -119,25 +47,25 @@ export default function ClientDashboard({ user }) {
           setDashboardData(data);
           setNotifPrefs(data.emailNotifications || { onGradeUpdate: true, onFeedback: true, onGoalSet: true });
         } else {
-          setMessage({ type: 'error', text: 'Failed to load dashboard' });
+          setMessage({ type: 'error', text: 'Failed to load dashboard parameters.' });
         }
       } catch (error) {
-        console.error('Dashboard fetch error:', error);
-        setMessage({ type: 'error', text: 'Network error loading dashboard' });
+        console.error('Dashboard analytical core link drop error:', error);
+        setMessage({ type: 'error', text: 'Network connection error pulling data metrics.' });
       } finally {
         setLoading(false);
       }
     };
 
     if (token) fetchDashboard();
-  }, [token]);
+  }, [token, baseUrl]);
 
   const handleNotificationChange = async (key) => {
     const updated = { ...notifPrefs, [key]: !notifPrefs[key] };
     setNotifPrefs(updated);
 
     try {
-      const response = await fetch(apiUrl('/api/user/notification-preferences'), {
+      const response = await fetch(`${baseUrl}/api/user/notification-preferences`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -146,18 +74,18 @@ export default function ClientDashboard({ user }) {
         body: JSON.stringify(updated)
       });
       if (response.ok) {
-        setMessage({ type: 'success', text: 'Preferences updated successfully' });
+        setMessage({ type: 'success', text: 'Notification preferences synced successfully.' });
       }
     } catch (error) {
-      console.error('Failed to update preferences:', error);
-      setMessage({ type: 'error', text: 'Failed to update preferences' });
+      console.error('Failed processing server preferences change payload:', error);
+      setMessage({ type: 'error', text: 'Failed updating notification flags.' });
     }
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center pt-24">
-        <p className="text-neutral-400 text-sm font-mono animate-pulse">Loading your performance dashboard...</p>
+        <p className="text-neutral-400 text-sm font-mono animate-pulse">Loading your performance dashboard workspace...</p>
       </div>
     );
   }
@@ -165,11 +93,12 @@ export default function ClientDashboard({ user }) {
   if (!dashboardData) {
     return (
       <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center pt-24">
-        <p className="text-neutral-400">Unable to load dashboard data</p>
+        <p className="text-neutral-400 text-sm font-mono">Unable to parse linked user dashboard profile schemas.</p>
       </div>
     );
   }
 
+  // Calculate analytical bounds safely from gradeHistory profiles array
   const chartData = (dashboardData.gradeHistory || [])
     .slice(-10)
     .map((entry) => ({
@@ -183,7 +112,6 @@ export default function ClientDashboard({ user }) {
   const activeGoals = (dashboardData.goals || []).filter(g => g.status === 'active');
   const completedGoals = (dashboardData.goals || []).filter(g => g.status === 'completed');
 
-  // Calculate statistics
   const totalReviews = chartData.length;
   const averageNumeric = totalReviews > 0 ? Math.round(chartData.reduce((acc, c) => acc + c.grade, 0) / totalReviews) : 0;
   const averageLetter = convertNumericToGrade(averageNumeric);
@@ -191,12 +119,10 @@ export default function ClientDashboard({ user }) {
   const highestLetter = convertNumericToGrade(highestNumeric);
   const latestNumeric = totalReviews > 0 ? chartData[totalReviews - 1].grade : 0;
 
-  // Progression trend (delta between last two reviews)
   const progressionTrend = totalReviews >= 2 
     ? chartData[totalReviews - 1].grade - chartData[totalReviews - 2].grade 
     : null;
 
-  // Mock progression data for empty state
   const mockChartData = [
     { date: 'Wk 1', fullDate: 'Mock Week 1', grade: 65, originalGrade: 'D+ (Mock)', feedback: 'Initial baseline assessment.' },
     { date: 'Wk 2', fullDate: 'Mock Week 2', grade: 72, originalGrade: 'C (Mock)', feedback: 'Good recovery tracking, form improving.' },
@@ -211,23 +137,24 @@ export default function ClientDashboard({ user }) {
       <div className="absolute top-0 right-[5%] w-112.5 h-112.5 bg-emerald-100/30 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-8 relative z-10">
-        {/* HEADER */}
-        <div className="mb-8 text-left">
+        
+        {/* DASHBOARD HEADER BRANDING BAR */}
+        <div className="mb-8 text-left border-b border-neutral-200/60 pb-6">
           <div className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-4 py-1 rounded-full mb-3">
             <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-emerald-600 text-[10px] font-mono font-bold uppercase tracking-widest">
-              Performance Dashboard
+              Performance Dashboard Workspace
             </span>
           </div>
           <h1 className="text-3xl font-light tracking-tight text-neutral-900 uppercase">
-            Your <span className="font-serif italic text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500 normal-case">Fitness Performance</span>
+            Your <span className="font-serif italic text-transparent bg-clip-text bg-linear-to-r from-emerald-500 to-teal-500 normal-case">Fitness Performance</span>
           </h1>
           <p className="text-neutral-400 text-xs mt-1 font-mono">
-            Athlete: {dashboardData.username}
+            Athlete Identity Ledger: <span className="text-neutral-700 font-bold">{dashboardData.username}</span>
           </p>
         </div>
 
-        {/* MESSAGING */}
+        {/* MESSAGING TOAST ENGINE */}
         {message.text && (
           <div className={`p-4 rounded-xl text-xs font-mono mb-6 border text-left ${
             message.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-rose-50 border-rose-200 text-rose-700'
@@ -236,134 +163,136 @@ export default function ClientDashboard({ user }) {
           </div>
         )}
 
-        {/* MAIN GRID */}
+        {/* WORKSPACE ANALYTICAL METRIC GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* CURRENT PERFORMANCE CARD */}
-          <div className="lg:col-span-1 bg-white border border-neutral-200/80 rounded-2xl p-6 shadow-sm space-y-4">
+          
+          {/* CURRENT COACH REVIEW MATRIX */}
+          <div className="lg:col-span-1 bg-white border border-neutral-200/80 rounded-2xl p-6 shadow-2xs space-y-4 text-left">
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <h2 className="text-sm font-bold text-neutral-900 uppercase">Current Grade</h2>
-              <span className="text-[10px] font-mono text-neutral-400">Latest</span>
+              <h2 className="text-xs font-mono font-bold text-neutral-400 uppercase tracking-wider">Current Grade Indicators</h2>
+              <span className="text-[9px] font-mono bg-neutral-900 text-white font-bold tracking-widest uppercase px-1.5 py-0.5 rounded">Latest</span>
             </div>
             <div className="space-y-3">
-              <div className="text-center">
-                <div className="text-4xl font-bold text-emerald-600 mb-1">
+              <div className="text-center py-2 bg-neutral-50 rounded-xl border border-neutral-100 shadow-3xs">
+                <div className="text-4xl font-bold text-emerald-600 tracking-tight">
                   {dashboardData.currentGrade || 'Pending'}
                 </div>
-                <p className="text-xs text-neutral-400 font-mono uppercase">Coach Rating</p>
+                <p className="text-[10px] text-neutral-400 font-mono uppercase tracking-wider mt-0.5">Assigned Performance Evaluation</p>
               </div>
-              <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-xs text-neutral-700 leading-relaxed">
-                <p className="font-semibold text-neutral-900 mb-1">Feedback:</p>
-                <p className="whitespace-pre-wrap text-xs">
-                  {dashboardData.currentFeedback || 'No feedback yet. Keep training!'}
+              <div className="bg-emerald-50/40 border border-emerald-100/70 rounded-xl p-4 text-xs text-neutral-700 leading-relaxed">
+                <p className="font-bold font-mono uppercase tracking-wide text-[10px] text-emerald-800 mb-1.5">Coach Evaluation Notes</p>
+                <p className="whitespace-pre-wrap font-sans text-neutral-600 leading-relaxed">
+                  {dashboardData.currentFeedback || 'Analytical runtime notes pending. Execute macro goals and update metrics lines.'}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* GOALS PROGRESS */}
-          <div className="lg:col-span-1 bg-white border border-neutral-200/80 rounded-2xl p-6 shadow-sm space-y-4">
+          {/* ACTIVE FITNESS CORE OBJECTIVES */}
+          <div className="lg:col-span-1 bg-white border border-neutral-200/80 rounded-2xl p-6 shadow-2xs space-y-4 text-left">
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <h2 className="text-sm font-bold text-neutral-900 uppercase">Goals</h2>
-              <span className="text-[10px] font-mono bg-amber-100 text-amber-700 px-2 py-0.5 rounded">
-                {activeGoals.length} Active
+              <h2 className="text-xs font-mono font-bold text-neutral-400 uppercase tracking-wider">Objective Targets</h2>
+              <span className="text-[10px] font-mono font-bold bg-amber-50 border border-amber-200 text-amber-700 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                {activeGoals.length} Target vectors
               </span>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-neutral-600">Active:</span>
-                <span className="font-bold text-amber-600">{activeGoals.length}</span>
+            <div className="space-y-3 pt-1">
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="text-neutral-500 uppercase">Active Clusters //</span>
+                <span className="font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">{activeGoals.length}</span>
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-neutral-600">Completed:</span>
-                <span className="font-bold text-emerald-600">{completedGoals.length}</span>
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="text-neutral-500 uppercase">Deployed Bounds //</span>
+                <span className="font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">{completedGoals.length}</span>
               </div>
-              <div className="mt-4 pt-4 border-t border-neutral-100">
-                <p className="text-xs text-neutral-400 font-mono">Total Goals: {dashboardData.goals?.length || 0}</p>
+              <div className="mt-4 pt-4 border-t border-neutral-100 flex items-center justify-between text-[11px] font-mono text-neutral-400">
+                <span>Core Target Index Total:</span>
+                <span className="font-bold text-neutral-700">{dashboardData.goals?.length || 0}</span>
               </div>
             </div>
           </div>
 
-          {/* NOTIFICATION PREFERENCES */}
-          <div className="lg:col-span-1 bg-white border border-neutral-200/80 rounded-2xl p-6 shadow-sm space-y-4">
+          {/* SYSTEM PREFERENCES FLAG CAPTURE */}
+          <div className="lg:col-span-1 bg-white border border-neutral-200/80 rounded-2xl p-6 shadow-2xs space-y-4 text-left">
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <h2 className="text-sm font-bold text-neutral-900 uppercase">Notifications</h2>
-              <span className="text-[10px] font-mono text-neutral-400">Settings</span>
+              <h2 className="text-xs font-mono font-bold text-neutral-400 uppercase tracking-wider">Notification Subsystems</h2>
+              <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-wider">Parameters</span>
             </div>
-            <div className="space-y-3">
-              <label className="flex items-center gap-3 cursor-pointer text-sm">
+            <div className="space-y-2.5 pt-1">
+              <label className="flex items-center gap-3 cursor-pointer text-xs font-mono text-neutral-600 hover:text-neutral-900 transition-all select-none">
                 <input
                   type="checkbox"
                   checked={notifPrefs.onGradeUpdate || false}
                   onChange={() => handleNotificationChange('onGradeUpdate')}
-                  className="w-4 h-4 rounded border-neutral-300 text-emerald-600"
+                  className="w-4 h-4 rounded border-neutral-300 text-emerald-600 focus:ring-0 focus:ring-offset-0 bg-neutral-50 cursor-pointer"
                 />
-                <span className="text-neutral-700">Grade Updates</span>
+                <span>Grade Assessment Pushes</span>
               </label>
-              <label className="flex items-center gap-3 cursor-pointer text-sm">
+              <label className="flex items-center gap-3 cursor-pointer text-xs font-mono text-neutral-600 hover:text-neutral-900 transition-all select-none">
                 <input
                   type="checkbox"
                   checked={notifPrefs.onFeedback || false}
                   onChange={() => handleNotificationChange('onFeedback')}
-                  className="w-4 h-4 rounded border-neutral-300 text-emerald-600"
+                  className="w-4 h-4 rounded border-neutral-300 text-emerald-600 focus:ring-0 focus:ring-offset-0 bg-neutral-50 cursor-pointer"
                 />
-                <span className="text-neutral-700">Feedback</span>
+                <span>Strategic Feedback Syncs</span>
               </label>
-              <label className="flex items-center gap-3 cursor-pointer text-sm">
+              <label className="flex items-center gap-3 cursor-pointer text-xs font-mono text-neutral-600 hover:text-neutral-900 transition-all select-none">
                 <input
                   type="checkbox"
                   checked={notifPrefs.onGoalSet || false}
                   onChange={() => handleNotificationChange('onGoalSet')}
-                  className="w-4 h-4 rounded border-neutral-300 text-emerald-600"
+                  className="w-4 h-4 rounded border-neutral-300 text-emerald-600 focus:ring-0 focus:ring-offset-0 bg-neutral-50 cursor-pointer"
                 />
-                <span className="text-neutral-700">New Goals</span>
+                <span>Target Vector Additions</span>
               </label>
             </div>
           </div>
         </div>
 
-        {/* ANALYTICAL PERFORMANCE SECTION */}
-        <div className="bg-white border border-neutral-200/80 rounded-2xl p-6 sm:p-8 shadow-sm mb-8 text-left relative overflow-hidden">
+        {/* ANALYTICAL TIME-SERIES RECHARTS WRAPPER */}
+        <div className="bg-white border border-neutral-200/80 rounded-2xl p-6 sm:p-8 shadow-2xs mb-8 text-left relative overflow-hidden">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4 mb-6">
             <div>
-              <h2 className="text-sm font-bold text-neutral-900 uppercase">
-                Analytical Performance
+              <h2 className="text-sm font-bold text-neutral-900 uppercase tracking-tight">
+                Analytical Performance Matrix
               </h2>
-              <p className="text-xs text-neutral-400 mt-1">
-                Visualizing workout metrics & nutrition progression history
+              <p className="text-xs text-neutral-400 mt-0.5">
+                Time-series execution history of physical tracking parameters.
               </p>
             </div>
             {totalReviews > 0 && (
-              <span className="self-start sm:self-center px-3 py-1 text-[10px] font-mono bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full font-bold">
-                {totalReviews} REVIEWS RECORDED
+              <span className="self-start sm:self-center px-3 py-1 text-[10px] font-mono bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full font-bold uppercase tracking-wider shadow-3xs">
+                {totalReviews} Evaluation Snapshots Listed
               </span>
             )}
           </div>
 
-          {/* STATISTICS RIBBON */}
+          {/* STATISTICS SUMMARY DASHBOARD STRIP */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-neutral-50 border border-neutral-200/50 p-4 rounded-xl">
-              <span className="text-[10px] font-mono text-neutral-400 font-bold uppercase tracking-wider block">Average Grade</span>
-              <span className="text-lg font-bold text-neutral-800 block mt-1">
+            <div className="bg-[#FAFAFA] border border-neutral-200/40 p-4 rounded-xl shadow-3xs">
+              <span className="text-[10px] font-mono text-neutral-400 font-bold uppercase tracking-wider block">Running Average</span>
+              <span className="text-base font-bold text-neutral-800 block mt-1 font-mono">
                 {totalReviews > 0 ? `${averageNumeric}% (${averageLetter})` : '--'}
               </span>
             </div>
-            <div className="bg-neutral-50 border border-neutral-200/50 p-4 rounded-xl">
-              <span className="text-[10px] font-mono text-neutral-400 font-bold uppercase tracking-wider block">Highest Rating</span>
-              <span className="text-lg font-bold text-neutral-800 block mt-1">
+            <div className="bg-[#FAFAFA] border border-neutral-200/40 p-4 rounded-xl shadow-3xs">
+              <span className="text-[10px] font-mono text-neutral-400 font-bold uppercase tracking-wider block">Peak Metric Index</span>
+              <span className="text-base font-bold text-neutral-800 block mt-1 font-mono">
                 {totalReviews > 0 ? `${highestLetter} (${highestNumeric}%)` : '--'}
               </span>
             </div>
-            <div className="bg-neutral-50 border border-neutral-200/50 p-4 rounded-xl">
-              <span className="text-[10px] font-mono text-neutral-400 font-bold uppercase tracking-wider block">Latest Score</span>
-              <span className="text-lg font-bold text-neutral-800 block mt-1">
+            <div className="bg-[#FAFAFA] border border-neutral-200/40 p-4 rounded-xl shadow-3xs">
+              <span className="text-[10px] font-mono text-neutral-400 font-bold uppercase tracking-wider block">Latest Evaluated Run</span>
+              <span className="text-base font-bold text-neutral-800 block mt-1 font-mono">
                 {totalReviews > 0 ? `${latestNumeric}%` : '--'}
               </span>
             </div>
-            <div className="bg-neutral-50 border border-neutral-200/50 p-4 rounded-xl">
-              <span className="text-[10px] font-mono text-neutral-400 font-bold uppercase tracking-wider block">Progression Trend</span>
-              <span className="text-lg font-bold mt-1 block">
+            <div className="bg-[#FAFAFA] border border-neutral-200/40 p-4 rounded-xl shadow-3xs">
+              <span className="text-[10px] font-mono text-neutral-400 font-bold uppercase tracking-wider block">Progression Vector Delta</span>
+              <span className="text-sm font-bold mt-1.5 block font-mono">
                 {totalReviews < 2 ? (
-                  <span className="text-neutral-400 font-medium text-sm">Awaiting reviews</span>
+                  <span className="text-neutral-400 font-normal text-xs uppercase">Awaiting evaluation delta</span>
                 ) : progressionTrend > 0 ? (
                   <span className="text-emerald-600 font-bold flex items-center gap-0.5">
                     ▲ +{progressionTrend}%
@@ -373,16 +302,14 @@ export default function ClientDashboard({ user }) {
                     ▼ {progressionTrend}%
                   </span>
                 ) : (
-                  <span className="text-amber-500 font-bold">
-                    Stable (0%)
-                  </span>
+                  <span className="text-amber-500 font-bold">Stable (0%)</span>
                 )}
               </span>
             </div>
           </div>
 
-          {/* DYNAMIC CHART OR STUNNING EMPTY STATE */}
-          <div className="relative w-full h-[320px]">
+          {/* DYNAMIC SVGS CANVAS ENGINE */}
+          <div className="relative w-full h-80">
             {totalReviews > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
@@ -415,35 +342,28 @@ export default function ClientDashboard({ user }) {
               </ResponsiveContainer>
             ) : (
               <>
-                {/* Mock Chart Background */}
-                <div className="absolute inset-0 opacity-[0.08] select-none pointer-events-none">
+                {/* Visual Empty Mask */}
+                <div className="absolute inset-0 opacity-[0.07] select-none pointer-events-none">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={mockChartData} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#CCCCCC" vertical={false} />
                       <XAxis dataKey="date" stroke="#9CA3AF" style={{ fontSize: '11px', fontFamily: 'monospace' }} />
                       <YAxis domain={[0, 100]} stroke="#9CA3AF" style={{ fontSize: '11px', fontFamily: 'monospace' }} />
-                      <Line
-                        type="monotone"
-                        dataKey="grade"
-                        stroke="#9CA3AF"
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        dot={{ fill: '#D1D5DB', r: 4 }}
-                      />
+                      <Line type="monotone" dataKey="grade" stroke="#9CA3AF" strokeWidth={2} strokeDasharray="5 5" dot={{ fill: '#D1D5DB', r: 4 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
-                {/* Centered Glassmorphism Alert Card */}
+                {/* Dynamic Notification Hub Shield */}
                 <div className="absolute inset-0 flex items-center justify-center p-4">
-                  <div className="bg-white/85 backdrop-blur-xs border border-neutral-200/60 rounded-2xl p-6 sm:p-8 max-w-md text-center shadow-lg space-y-3">
-                    <div className="h-12 w-12 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-xl mx-auto animate-pulse">
+                  <div className="bg-white/90 backdrop-blur-xs border border-neutral-200/60 rounded-2xl p-6 sm:p-8 max-w-md text-center shadow-lg space-y-2">
+                    <div className="h-11 w-11 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-lg mx-auto animate-pulse">
                       📈
                     </div>
-                    <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wide">
-                      Awaiting Coach Evaluation
+                    <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wide">
+                      Awaiting Coach Review Injection
                     </h3>
-                    <p className="text-xs text-neutral-500 leading-relaxed">
-                      Your progression line-chart and statistical trend vectors will populate here as soon as your coach records your first manual rating. Keep logging your metrics!
+                    <p className="text-xs text-neutral-500 leading-relaxed font-sans">
+                      Your trend metric visualizations populates here following administrative profile manual scoring execution tasks. Keep running baseline tracking parameters!
                     </p>
                   </div>
                 </div>
@@ -452,91 +372,98 @@ export default function ClientDashboard({ user }) {
           </div>
         </div>
 
-        {/* ACTIVE GOALS */}
+        {/* ACTIVE OBJECTIVES MATRIX DISPLAY */}
         {activeGoals.length > 0 && (
-          <div className="bg-white border border-neutral-200/80 rounded-2xl p-6 shadow-sm mb-8 text-left">
-            <h2 className="text-sm font-bold text-neutral-900 uppercase mb-4 border-b border-neutral-100 pb-3">
-              Active Fitness Goals
+          <div className="bg-white border border-neutral-200/80 rounded-2xl p-6 shadow-2xs mb-8 text-left">
+            <h2 className="text-xs font-mono font-bold text-neutral-400 uppercase mb-4 border-b border-neutral-100 pb-3 tracking-wider">
+              Active Fitness Milestone Vectors
             </h2>
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {activeGoals.map((goal, idx) => (
-                <div key={idx} className="bg-amber-50/70 border border-amber-100 rounded-xl p-4 space-y-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-sm font-bold text-neutral-900">{goal.title}</h3>
-                      <p className="text-xs text-neutral-600 mt-1">{goal.description}</p>
+                <div key={idx} className="bg-amber-50/40 border border-amber-200/60 rounded-xl p-4 space-y-2 flex flex-col justify-between">
+                  <div className="space-y-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="text-sm font-bold text-neutral-900 tracking-tight">{goal.title}</h3>
+                      <span className="text-[9px] font-mono font-bold uppercase bg-amber-100/80 border border-amber-200 text-amber-800 px-2 py-0.5 rounded shadow-3xs whitespace-nowrap">
+                        {goal.status}
+                      </span>
                     </div>
-                    <span className="text-[10px] font-mono bg-amber-100 text-amber-700 px-2 py-1 rounded whitespace-nowrap">
-                      {goal.status}
-                    </span>
+                    <p className="text-xs text-neutral-500 leading-relaxed">{goal.description}</p>
                   </div>
-                  {goal.target && <p className="text-xs text-amber-700 font-semibold">Target: {goal.target}</p>}
-                  {goal.deadline && (
-                    <p className="text-xs text-neutral-500 font-mono">
-                      Due: {new Date(goal.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </p>
-                  )}
+                  <div className="pt-2 border-t border-amber-200/30 flex flex-col gap-1">
+                    {goal.target && (
+                      <p className="text-xs text-amber-900 font-medium">
+                        <span className="font-mono text-[10px] text-amber-600 uppercase font-bold tracking-wider mr-1">Target Cluster //</span> 
+                        {goal.target}
+                      </p>
+                    )}
+                    {goal.deadline && (
+                      <p className="text-[10px] text-neutral-400 font-mono">
+                        Target Boundary Term: {new Date(goal.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* SWOT ANALYSIS */}
+        {/* SWOT CORE CONFIGURATION BLOCK */}
         {dashboardData.swot && (
-          <div className="bg-white border border-neutral-200/80 rounded-2xl p-6 shadow-sm mb-8 text-left">
-            <h2 className="text-sm font-bold text-neutral-900 uppercase mb-4 border-b border-neutral-100 pb-3">
-              SWOT Analysis
+          <div className="bg-white border border-neutral-200/80 rounded-2xl p-6 shadow-2xs mb-8 text-left">
+            <h2 className="text-xs font-mono font-bold text-neutral-400 uppercase mb-4 border-b border-neutral-100 pb-3 tracking-wider">
+              SWOT Performance Matrix Fields
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {dashboardData.swot.strengths && (
-                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 space-y-2">
-                  <h3 className="text-xs font-bold text-emerald-800 uppercase">💪 Strengths</h3>
-                  <p className="text-xs text-neutral-700 whitespace-pre-wrap">{dashboardData.swot.strengths}</p>
+                <div className="bg-emerald-50/30 border border-emerald-100/70 rounded-xl p-4 space-y-1">
+                  <h3 className="text-[10px] font-mono font-bold text-emerald-800 uppercase tracking-wider">💪 [S] Strengths Vector</h3>
+                  <p className="text-xs text-neutral-600 leading-relaxed whitespace-pre-wrap font-mono">{dashboardData.swot.strengths}</p>
                 </div>
               )}
               {dashboardData.swot.weaknesses && (
-                <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 space-y-2">
-                  <h3 className="text-xs font-bold text-rose-800 uppercase">⏳ Weaknesses</h3>
-                  <p className="text-xs text-neutral-700 whitespace-pre-wrap">{dashboardData.swot.weaknesses}</p>
+                <div className="bg-rose-50/30 border border-rose-100/70 rounded-xl p-4 space-y-1">
+                  <h3 className="text-[10px] font-mono font-bold text-rose-800 uppercase tracking-wider">⏳ [W] Weaknesses Vector</h3>
+                  <p className="text-xs text-neutral-600 leading-relaxed whitespace-pre-wrap font-mono">{dashboardData.swot.weaknesses}</p>
                 </div>
               )}
               {dashboardData.swot.opportunities && (
-                <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 space-y-2">
-                  <h3 className="text-xs font-bold text-amber-800 uppercase">📈 Opportunities</h3>
-                  <p className="text-xs text-neutral-700 whitespace-pre-wrap">{dashboardData.swot.opportunities}</p>
+                <div className="bg-amber-50/30 border border-amber-100/70 rounded-xl p-4 space-y-1">
+                  <h3 className="text-[10px] font-mono font-bold text-amber-800 uppercase tracking-wider">📈 [O] Opportunities Vector</h3>
+                  <p className="text-xs text-neutral-600 leading-relaxed whitespace-pre-wrap font-mono">{dashboardData.swot.opportunities}</p>
                 </div>
               )}
               {dashboardData.swot.threats && (
-                <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 space-y-2">
-                  <h3 className="text-xs font-bold text-neutral-700 uppercase">🎯 Threats</h3>
-                  <p className="text-xs text-neutral-700 whitespace-pre-wrap">{dashboardData.swot.threats}</p>
+                <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 space-y-1">
+                  <h3 className="text-[10px] font-mono font-bold text-neutral-700 uppercase tracking-wider">🎯 [T] Threats Vector</h3>
+                  <p className="text-xs text-neutral-600 leading-relaxed whitespace-pre-wrap font-mono">{dashboardData.swot.threats}</p>
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* PERFORMANCE REVIEWS TIMELINE */}
+        {/* REVIEWS ARCHIVE CHRONOLOGY BLOCK */}
         {dashboardData.gradeHistory && dashboardData.gradeHistory.length > 0 && (
-          <div className="bg-white border border-neutral-200/80 rounded-2xl p-6 shadow-sm text-left">
-            <h2 className="text-sm font-bold text-neutral-900 uppercase mb-4 border-b border-neutral-100 pb-3">
-              Performance Reviews
+          <div className="bg-white border border-neutral-200/80 rounded-2xl p-6 shadow-2xs text-left">
+            <h2 className="text-xs font-mono font-bold text-neutral-400 uppercase mb-4 border-b border-neutral-100 pb-3 tracking-wider">
+              Chronological Performance Reviews Log
             </h2>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
               {[...dashboardData.gradeHistory].reverse().map((entry, idx) => (
-                <div key={idx} className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 space-y-2">
-                  <div className="flex items-center justify-between">
+                <div key={idx} className="bg-[#FAFAFA] border border-neutral-200/60 hover:bg-neutral-50 transition-all rounded-xl p-4 space-y-2 shadow-3xs">
+                  <div className="flex items-center justify-between border-b border-neutral-100/80 pb-1.5">
                     <div>
-                      <p className="text-xs text-neutral-500 font-mono">
+                      <p className="text-[10px] text-neutral-400 font-mono">
                         {new Date(entry.ratedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </p>
-                      <p className="text-sm font-bold text-neutral-900 mt-1">Grade: {entry.grade}</p>
+                      <p className="text-sm font-bold text-neutral-900 mt-0.5">Grade Index: <span className="text-emerald-600 font-mono">{entry.grade}</span></p>
                     </div>
-                    <span className="text-[10px] font-mono text-neutral-400">{entry.ratedBy}</span>
+                    <span className="text-[10px] font-mono bg-neutral-200 text-neutral-600 px-2 py-0.5 rounded font-semibold tracking-wide uppercase">{entry.ratedBy}</span>
                   </div>
                   {entry.feedback && (
-                    <p className="text-xs text-neutral-600 whitespace-pre-wrap">{entry.feedback}</p>
+                    <p className="text-xs text-neutral-600 font-sans leading-relaxed whitespace-pre-wrap pt-0.5">{entry.feedback}</p>
                   )}
                 </div>
               ))}
