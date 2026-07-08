@@ -15,30 +15,37 @@ dns.setServers(['8.8.8.8', '8.8.4.4']);
 const app = express();
 
 // ==========================================
-// CORRECTED CORS MIDDLEWARE
+// PRODUCTION-ALIGNED CORS MIDDLEWARE
 // ==========================================
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
 const allowedOrigins = [
-    'http://localhost:5173',
-    'https://4fitness-frontend-oddn.vercel.app',
-    'https://4fitness-frontend-oddn-git-main-newstamen-david-s-projects.vercel.app'
-];
+    ...(isDevelopment ? ['http://localhost:5173', 'http://127.0.0.1:5173'] : []),
+    'https://4fitnezz-frontend-39rl56qb3-newstamen-david-s-projects.vercel.app/',
+    '4fitnezz-frontend-git-main-newstamen-david-s-projects.vercel.app',
+    ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [])
+].filter(Boolean);
 
 app.use(cors({
     origin: function (origin, callback) {
         // Allow requests with no origin (like mobile apps, curl, or server-to-server)
         if (!origin) return callback(null, true);
         
-        if (allowedOrigins.indexOf(origin) !== -1 || process.env.FRONTEND_URL === origin) {
+        if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
+            console.warn(`[CORS] Blocked request from origin: ${origin}`);
             callback(new Error('Not allowed by CORS restrictions'));
         }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-})); 
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    optionsSuccessStatus: 200
+}));
 // ==========================================
+// DEBUG: Allowed origins in this environment
+console.log('[CORS] Allowed origins:', allowedOrigins);
 
 app.use(helmet()); 
 

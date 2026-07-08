@@ -91,6 +91,9 @@ export default function Login({ setUser }) {
           </button>
 
           <p className="text-xs text-center text-slate-500 pt-2">
+            <Link to="/forgot-password" className="text-emerald-400 hover:underline">Forgot password?</Link>
+          </p>
+          <p className="text-xs text-center text-slate-500 pt-2">
             New athlete? <Link to="/signup" className="text-emerald-400 hover:underline">Register Profile here</Link>
           </p>
         </form>

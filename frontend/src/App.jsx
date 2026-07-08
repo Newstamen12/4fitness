@@ -5,6 +5,7 @@ import Footer from './components/Footer';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ForgotPassword from './pages/ForgotPassword';
 import Profile from './pages/Profile';
 import ClientDashboard from './pages/ClientDashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -33,74 +34,14 @@ const PublicRoute = ({ user, isAdmin, children }) => {
 function LandingPage({ setUser }) {
   return (
     <div className="min-h-[80vh] bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_35%),linear-gradient(135deg,_#020617_0%,_#0f172a_60%,_#111827_100%)] px-4 py-16 sm:px-6 lg:px-8">
-      <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-        <div className="text-center lg:text-left">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.3em] text-emerald-300">
-            Welcome to 4 FITNESS
+      <div className="mx-auto max-w-2xl">
+        <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-8 shadow-2xl shadow-emerald-950/20">
+          <h1 className="text-4xl font-black text-white mb-4">Welcome to 4 FITNESS</h1>
+          <p className="text-slate-400 mb-6">Please sign in or create a profile to continue.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <a href="/login" className="rounded-2xl bg-emerald-500 px-6 py-4 text-center text-white font-bold uppercase tracking-[0.12em] hover:bg-emerald-400 transition">Sign In</a>
+            <a href="/signup" className="rounded-2xl border border-slate-700 px-6 py-4 text-center text-slate-100 font-bold uppercase tracking-[0.12em] hover:bg-slate-800 transition">Sign Up</a>
           </div>
-          <h1 className="mt-6 text-4xl font-black tracking-tight text-white sm:text-5xl">
-            Train smarter with a personal performance hub.
-          </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg lg:mx-0">
-            Track goals, review progress, and keep your coaching journey moving with a polished client dashboard built for momentum.
-          </p>
-
-          <div className="mt-8 flex flex-wrap justify-center gap-3 lg:justify-start">
-            <div className="rounded-full border border-white/10 bg-white/10 px-3 py-2 text-sm text-slate-200">Goal tracking</div>
-            <div className="rounded-full border border-white/10 bg-white/10 px-3 py-2 text-sm text-slate-200">Performance reviews</div>
-            <div className="rounded-full border border-white/10 bg-white/10 px-3 py-2 text-sm text-slate-200">Actionable coaching</div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="rounded-[28px] border border-white/10 bg-slate-900/80 p-5 shadow-2xl shadow-emerald-950/30 backdrop-blur-xl">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-emerald-300">Featured client dashboard</p>
-                <h2 className="mt-2 text-xl font-semibold text-white">Ari • Performance snapshot</h2>
-              </div>
-              <div className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-sm font-semibold text-emerald-300">
-                +12% this month
-              </div>
-            </div>
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-white/10 bg-slate-800/80 p-3">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Consistency</p>
-                <p className="mt-2 text-2xl font-black text-white">92%</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-slate-800/80 p-3">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Recovery</p>
-                <p className="mt-2 text-2xl font-black text-white">84%</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-slate-800/80 p-3">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Strength</p>
-                <p className="mt-2 text-2xl font-black text-white">+6.2%</p>
-              </div>
-            </div>
-
-            <div className="mt-5 rounded-2xl border border-white/10 bg-linear-to-br from-slate-800/90 to-slate-900/90 p-4">
-              <div className="flex items-center justify-between text-sm text-slate-300">
-                <span>Weekly readiness</span>
-                <span className="font-semibold text-white">82%</span>
-              </div>
-              <div className="mt-3 h-2 rounded-full bg-slate-700">
-                <div className="h-2 w-[82%] rounded-full bg-linear-to-r from-emerald-400 to-cyan-400"></div>
-              </div>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3">
-                  <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">Next goal</p>
-                  <p className="mt-1 font-semibold text-white">Complete 3 mobility sessions</p>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Coach note</p>
-                  <p className="mt-1 font-semibold text-white">Keep protein intake steady</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <AuthPanel setUser={setUser} />
         </div>
       </div>
     </div>
@@ -143,7 +84,7 @@ export default function App() {
             
             {/* Private Internal Pages */}
             <Route path="/" element={
-              user ? <Home user={user} /> : <LandingPage setUser={setUser} />
+              user ? <Home user={user} /> : <Navigate to="/login" replace />
             } />
             
             <Route path="/about" element={
@@ -181,6 +122,12 @@ export default function App() {
             <Route path="/signup" element={
               <PublicRoute user={user} isAdmin={isAdmin}>
                 <Signup />
+              </PublicRoute>
+            } />
+
+            <Route path="/forgot-password" element={
+              <PublicRoute user={user} isAdmin={isAdmin}>
+                <ForgotPassword />
               </PublicRoute>
             } />
 

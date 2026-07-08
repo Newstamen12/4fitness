@@ -34,6 +34,15 @@ const userSchema = new Schema({
     type: String,
     default: 'free' // 'free', 'premium'
   },
+
+  passwordResetCode: {
+    type: String,
+    default: null
+  },
+  passwordResetExpiry: {
+    type: Date,
+    default: null
+  },
   
   // 🤖 NESTED AI PERFORMANCE RATINGS & ADVICE FIELDS
   performance: {

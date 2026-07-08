@@ -129,7 +129,10 @@ export default function Signup() {
                 className="w-4 h-4 accent-emerald-400 cursor-pointer"
               />
               <label htmlFor="adminModeCheckbox" className="text-xs font-mono text-slate-400 cursor-pointer select-none">
-                Request Administrative Provisioning Level <span className="text-[10px] text-amber-500 block mt-0.5 font-sans">(Allowed only for the system's first administrator account)</span>
+                Request Administrative Provisioning Level
+                <span className="text-[10px] text-amber-500 block mt-0.5 font-sans">
+                  (Only approved admin emails are accepted once an admin already exists)
+                </span>
               </label>
             </div>
 

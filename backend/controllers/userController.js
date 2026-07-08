@@ -1,6 +1,16 @@
 const { User, Swot } = require('../model/userModel');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 const sendEmail = require('../utils/sendEmail');
+
+const adminAllowList = (process.env.ADMIN_EMAILS || '')
+  .split(',')
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean);
+
+const isAllowedAdminEmail = (email) => {
+  return adminAllowList.includes(String(email || '').trim().toLowerCase());
+};
 
 // ✅ Initialize the official @google/genai SDK once at the top
 const { GoogleGenAI } = require("@google/genai");
@@ -38,10 +48,12 @@ const signupUser = async (req, res) => {
     
     if (requestedRole === 'admin') {
       const existingAdmin = await User.findOne({ role: 'admin' });
-      if (existingAdmin) {
-        user.role = 'client';
-      } else {
+      if (!existingAdmin || isAllowedAdminEmail(email)) {
         user.role = 'admin';
+      } else {
+        return res.status(403).json({
+          error: 'Admin registration is currently restricted. Contact the site owner to request administrative access.'
+        });
       }
     } else {
       user.role = 'client';
@@ -87,7 +99,60 @@ const verifyEmailCode = async (req, res) => {
   }
 };
 
-// 🤖 4. AI-ASSISTED CLIENT GRADING
+// 🔐 4. REQUEST PASSWORD RESET
+const requestPasswordReset = async (req, res) => {
+  const { email } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(200).json({ message: 'If that email exists, a reset code was sent.' });
+    }
+
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    user.passwordResetCode = resetCode;
+    user.passwordResetExpiry = Date.now() + 1000 * 60 * 60; // 1 hour
+    await user.save();
+
+    await sendEmail(email, '4 FITNESS Password Reset Code', `Your password reset code is: ${resetCode}`);
+
+    res.status(200).json({ message: 'If that email exists, a reset code was sent.' });
+  } catch (error) {
+    console.error('Password reset request failed:', error);
+    res.status(500).json({ error: 'Failed to initiate password reset.' });
+  }
+};
+
+// 🔐 5. COMPLETE PASSWORD RESET
+const resetPassword = async (req, res) => {
+  const { email, code, newPassword } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid password reset request.' });
+    }
+
+    if (!user.passwordResetCode || String(user.passwordResetCode) !== String(code)) {
+      return res.status(400).json({ error: 'Invalid or expired reset code.' });
+    }
+
+    if (!user.passwordResetExpiry || user.passwordResetExpiry < Date.now()) {
+      return res.status(400).json({ error: 'Reset code has expired.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    user.passwordResetCode = null;
+    user.passwordResetExpiry = null;
+    await user.save();
+
+    res.status(200).json({ message: 'Your password has been reset successfully. Please sign in.' });
+  } catch (error) {
+    console.error('Password reset failed:', error);
+    res.status(500).json({ error: 'Failed to reset password.' });
+  }
+};
+
+// 🤖 6. AI-ASSISTED CLIENT GRADING
 const gradeClientPerformance = async (req, res) => {
   const { clientId, workoutMetrics, dietMetrics } = req.body;
 
@@ -452,6 +517,8 @@ module.exports = {
   loginUser,
   signupUser,
   verifyEmailCode,
+  requestPasswordReset,
+  resetPassword,
   gradeClientPerformance,
   gradeUserProfile,
   getUserProfile,
