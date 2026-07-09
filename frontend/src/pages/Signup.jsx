@@ -6,7 +6,6 @@ export default function Signup() {
   const navigate = useNavigate();
 
   // Form input states
-  const [isAdminMode, setIsAdminMode] = useState(false);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,7 +33,7 @@ export default function Signup() {
           username,
           email,
           password,
-          requestedRole: isAdminMode ? 'admin' : 'client'
+          requestedRole: 'client' // Cleans up UI. Everyone signs up under one form seamlessly.
         }),
       });
 
@@ -42,14 +41,14 @@ export default function Signup() {
 
       if (!response.ok) {
         setLoading(false);
-        // This will now capture and display "Password not strong enough" or "Email already in use"
         setError(data.error || "The server rejected this provisioning request.");
       } else {
         setLoading(false);
         setSuccessMessage(data.message || "Signup successful! Check your email for your 6-digit OTP code.");
         setIsVerifying(true);
       }
-    } catch (error) { console.error(error);
+    } catch (error) { 
+      console.error(error);
       setLoading(false);
       setError("Cannot link to authentication service. Verify your backend server is running.");
     }
@@ -62,7 +61,6 @@ export default function Signup() {
     setSuccessMessage('');
 
     try {
-      // ⚠️ Note: Double check if your express router uses /verify-otp or /verify-code to match your controller!
       const response = await fetch(apiUrl('/api/user/verify-otp'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -79,7 +77,8 @@ export default function Signup() {
         setSuccessMessage(data.message || "Account verified successfully! Redirecting to sign in...");
         setTimeout(() => navigate('/login'), 2000);
       }
-    } catch (error) { console.error(error);
+    } catch (error) { 
+      console.error(error);
       setLoading(false);
       setError("Network error encountered during verification handshake.");
     }
@@ -118,22 +117,6 @@ export default function Signup() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
-            </div>
-
-            <div className="flex items-center gap-3 my-4 p-3 bg-slate-950 border border-slate-800/60 rounded-lg">
-              <input 
-                type="checkbox"
-                id="adminModeCheckbox"
-                checked={isAdminMode}
-                onChange={(e) => setIsAdminMode(e.target.checked)}
-                className="w-4 h-4 accent-emerald-400 cursor-pointer"
-              />
-              <label htmlFor="adminModeCheckbox" className="text-xs font-mono text-slate-400 cursor-pointer select-none">
-                Request Administrative Provisioning Level
-                <span className="text-[10px] text-amber-500 block mt-0.5 font-sans">
-                  (Only approved admin emails are accepted once an admin already exists)
-                </span>
-              </label>
             </div>
 
             <div className="space-y-1">

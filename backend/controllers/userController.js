@@ -31,8 +31,17 @@ const loginUser = async (req, res) => {
         error: 'Please verify your email address using the OTP code sent during signup before logging in.' 
       });
     }
+
+    // ⚡ Dynamic admin assignment override
+    let activeRole = user.role;
+    if (isAllowedAdminEmail(email) && user.role !== 'admin') {
+      user.role = 'admin';
+      await user.save(); // Permanently save the role change to MongoDB
+      activeRole = 'admin';
+    }
+
     const token = createToken(user._id);
-    res.status(200).json({ email, token, role: user.role, plan: user.plan, username: user.username });
+    res.status(200).json({ email, token, role: activeRole, plan: user.plan, username: user.username });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -473,8 +482,8 @@ const getClientDashboard = async (req, res) => {
       username: client.username,
       email: client.email,
       plan: client.plan,
-      currentGrade: client.aiAnalysis.grade,
-      currentFeedback: client.aiAnalysis.feedback,
+      currentGrade: client.aiAnalysis?.grade,
+      currentFeedback: client.aiAnalysis?.feedback,
       gradeHistory: client.gradeHistory || [],
       goals: client.goals || [],
       swot: swot || { strengths: '', weaknesses: '', opportunities: '', threats: '' },
