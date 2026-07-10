@@ -51,7 +51,7 @@ export default function About() {
           <div className="inline-flex items-center gap-2 bg-rose-100/60 border border-rose-200 px-5 py-2 rounded-full">
             <span className="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
             <span className="text-rose-600 text-xs font-mono font-bold uppercase tracking-widest">
-              The 4 FITNESS Movement
+              The 4 FITNEZZ Movement
             </span>
           </div>
           
@@ -63,7 +63,7 @@ export default function About() {
           </h1>
           
           <p className="text-[#555555] text-sm sm:text-base max-w-2xl mx-auto font-normal leading-relaxed">
-            More than just a gym portal. 4 FITNESS is an elite training philosophy dedicated to high-performance coaching, community workout events, and structured physical accountability.
+            More than just a gym portal. 4 FITNEZZ is an elite training philosophy dedicated to high-performance coaching, community workout events, and structured physical accountability.
           </p>
         </div>
 
@@ -99,7 +99,7 @@ export default function About() {
             >
               <img
                 src={img}
-                alt={`4 FITNESS Community Event ${index + 1}`}
+                alt={`4 FITNEZZ Community Event ${index + 1}`}
                 className="max-w-full max-h-full object-contain p-4 filter contrast-[1.02]"
               />
               <div className="absolute inset-0 bg-linear-to-t from-neutral-50/20 via-transparent to-transparent pointer-events-none" />
