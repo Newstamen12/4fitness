@@ -27,12 +27,10 @@ app.use((req, res, next) => {
     next();
 });
 
-// ==========================================
-// 2. CORS CONFIGURATION (RUNS ONCE GLOBALLY)
-// ==========================================
 const allowedOrigins = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'https://4fitnezz-frontend.vercel.app', // <-- ADD THIS EXACT LINE
     'https://4fitnezz-frontend-oab7caq57-newstamen-david-s-projects.vercel.app',
     'https://4fitnezz-frontend-39rl56qb3-newstamen-david-s-projects.vercel.app',
     'https://4fitnezz-frontend-git-main-newstamen-david-s-projects.vercel.app',
