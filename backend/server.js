@@ -27,20 +27,32 @@ app.use((req, res, next) => {
     next();
 });
 
-const allowedOrigins = [
+// ==========================================
+// 2. DYNAMIC CORS ALLOWLIST STRATEGY
+// ==========================================
+const baseAllowedOrigins = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
-    'https://4fitnezz-frontend.vercel.app', // <-- ADD THIS EXACT LINE
-    'https://4fitnezz-frontend-oab7caq57-newstamen-david-s-projects.vercel.app',
-    'https://4fitnezz-frontend-39rl56qb3-newstamen-david-s-projects.vercel.app',
-    'https://4fitnezz-frontend-git-main-newstamen-david-s-projects.vercel.app',
-    ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [])
-].filter(Boolean);
-
-console.log('[CORS] Allowed origins:', allowedOrigins);
+    'https://4fitnezz-frontend.vercel.app'
+];
 
 const corsOptions = {
-    origin: allowedOrigins,
+    origin: function (origin, callback) {
+        // Allow server-to-server requests or API tools like Postman (where origin is undefined)
+        if (!origin) return callback(null, true);
+
+        // Match base URLs, standard .env string configuration, or ANY dynamic Vercel deployment branch URL
+        const isBaseOrigin = baseAllowedOrigins.includes(origin);
+        const isEnvOrigin = process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL;
+        const isVercelPreview = origin.startsWith('https://4fitnezz-frontend-') && origin.endsWith('.vercel.app');
+
+        if (isBaseOrigin || isEnvOrigin || isVercelPreview) {
+            return callback(null, true);
+        } else {
+            console.error(`[CORS REJECTED] Access denied for origin: ${origin}`);
+            return callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -52,12 +64,10 @@ app.use(cors(corsOptions));
 // ==========================================
 // 3. BODY PARSING STRATEGY
 // ==========================================
-// This single middleware parses JSON globally, but stores the raw buffer 
-// onto req.rawBody ONLY when hitting the webhook route.
 app.use(express.json({
     verify: (req, res, buf) => {
         if (req.originalUrl.startsWith('/api/payments/webhook')) {
-            req.rawBody = buf; // Kept as a Buffer, which Stripe/payment SDKs usually expect
+            req.rawBody = buf; 
         }
     }
 }));
