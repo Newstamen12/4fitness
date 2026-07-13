@@ -64,11 +64,11 @@ const sendEmail = async (email, subject, content) => {
     // 🔑 LAYOUT C: Secure Registration Verification Code (OTP)
     else {
       // If content was passed as an object containing the code extract it, otherwise use raw string
-      const rawCode = typeof content === 'object' ? content.code : content;
+      const rawCode = (typeof content === 'object' && content !== null) ? content.code : content;
       
       htmlTemplate = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
-          <h2 style="color: #000; text-align: center; tracking-spacing: 2px;">4 FITNESS</h2>
+          <h2 style="color: #000; text-align: center; letter-spacing: 2px;">4 FITNESS</h2>
           <hr style="border: 0; border-top: 1px solid #eee;" />
           <p style="font-size: 14px; color: #333;">Thank you for signing up for 4 FITNESS! Use the 6-digit verification code below to activate your premium account profile:</p>
           <div style="background: #f4f4f4; padding: 15px; font-size: 28px; font-weight: bold; text-align: center; letter-spacing: 6px; margin: 20px 0; border-radius: 4px; border: 1px dashed #ccc; color: #111;">
